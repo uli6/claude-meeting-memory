@@ -85,10 +85,20 @@ See [SETUP_GUIDE.md](./SETUP_GUIDE.md#security-disclosure) for detailed security
 
 ## Documentation
 
-- **[SETUP_GUIDE.md](./SETUP_GUIDE.md)** - Step-by-step setup walkthrough
-- **[docs/GOOGLE_OAUTH_SETUP.md](./docs/GOOGLE_OAUTH_SETUP.md)** - Getting Google credentials
-- **[docs/SLACK_SETUP.md](./docs/SLACK_SETUP.md)** - Getting Slack credentials
-- **[docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)** - Common issues & solutions
+**Getting Started:**
+- **[QUICK_START.md](./QUICK_START.md)** - 5-minute setup and first usage
+- **[SETUP_GUIDE.md](./SETUP_GUIDE.md)** - Complete setup walkthrough with 9 phases
+
+**Using the Skills:**
+- **[HOW_TO_USE.md](./docs/HOW_TO_USE.md)** - Complete guide to all three skills with examples
+- **[CRONTAB_SETUP.md](./docs/CRONTAB_SETUP.md)** - Enable automatic briefings every 10 minutes
+
+**Credentials & Configuration:**
+- **[docs/GOOGLE_OAUTH_SETUP.md](./docs/GOOGLE_OAUTH_SETUP.md)** - Getting Google OAuth credentials
+- **[docs/SLACK_SETUP.md](./docs/SLACK_SETUP.md)** - Getting Slack user token
+
+**Troubleshooting:**
+- **[docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)** - Common issues, FAQs, and solutions
 
 ## Support
 
