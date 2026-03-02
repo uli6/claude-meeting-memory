@@ -1,15 +1,15 @@
 ---
-name: meeting-prepper
+name: pre-meeting
 description: "Generates executive briefings before meetings. Reads action points, daily memory, memoria_agente and MEMORY.md; generates structured briefing (Active Pending Items + Historical Context). Use when the user asks for meeting briefing, meeting prepper, or meeting preparation."
 ---
 
-# Meeting Prepper (Claude Code Skill)
+# Pre-Meeting (Meeting Briefing Skill)
 
-Generates executive briefing before meetings using pending items and memory in `~/.claude/memory/`. Data is synchronized from Notion via script; the skill only reads local files.
+Generates executive briefing before meetings using pending items and memory stored in `~/.claude/memory/`. The skill reads local memory files to create contextual briefings.
 
-**Source:** [Clawdia Memory](https://www.notion.so/Clawdia-Memory-312d9a25aaca80689a81cbe3376ab260) on Notion. Synchronize with `~/.claude/scripts/sync-notion-memory.sh` before generating briefings.
+**Memory sources:** Action points, daily notes, user profile, people, projects, and executive memory (MEMORY.md)
 
-**Business flow:** See [BUSINESS_FLOW.md](BUSINESS_FLOW.md) for the complete flow (automatic + on-demand).
+**Business flow:** See [BUSINESS_FLOW.md](BUSINESS_FLOW.md) for the complete flow.
 
 ## How to execute (Claude Code)
 
@@ -37,18 +37,20 @@ If you don't specify title/participants, Claude will ask. You can paste calendar
 
 ### 2. Read files in ~/.claude/memory/
 
-All paths are in `~/.claude/memory/` (or `$HOME/.claude/memory/`).
+All memory files are in `~/.claude/memory/`:
 
 | File | Purpose |
 |------|---------|
 | `~/.claude/memory/action_points.md` | Active pending items (items not marked with `[x]`) — **source for "Active Pending Items"** |
-| `~/.claude/memory/memory/YYYY-MM-DD.md` | Daily memory (replace YYYY-MM-DD with today's date) |
-| `~/.claude/memory/memoria_agente/*.md` | Profile, people, projects, pending items, etc. |
-| `~/.claude/memory/MEMORY.md` | General executive memory — strategic context and next steps |
+| `~/.claude/memory/memoria_agente/user_profile.md` | User profile and context |
+| `~/.claude/memory/memoria_agente/people.md` | Key people and relationships |
+| `~/.claude/memory/memoria_agente/projects.md` | Current projects and status |
+| `~/.claude/memory/MEMORY.md` | Executive memory — decisions, dates, important information |
 
-- Read all `.md` files in `~/.claude/memory/memoria_agente/` that exist.
-- If any file doesn't exist, continue with the ones that do and briefly note what's missing.
-- If the `~/.claude/memory/memory/` folder is empty or missing, suggest the user run sync: `~/.claude/scripts/sync-notion-memory.sh`
+**How to handle missing files:**
+- Read all `.md` files in `~/.claude/memory/memoria_agente/` that exist
+- If files are empty/missing: continue with available files (they build up over time)
+- Memory grows as you use `/read-this` and when email automation populates files
 
 ### 3. Generate the briefing with this exact format
 
@@ -72,57 +74,57 @@ Rules:
 
 - Show the briefing to the user in the chat.
 
-## Sync (bidirectional: Notion ↔ ~/.claude/memory/)
+## Memory Population
 
-Before generating briefings, synchronize:
+Your memory grows through:
 
-```bash
-~/.claude/scripts/sync-notion-memory.sh
-```
+1. **Manual entry** — Edit files in `~/.claude/memory/memoria_agente/` directly
+2. **Using /read-this** — When you read documents, summaries are saved to memory
+3. **Email automation (optional)** — When enabled, emails automatically populate:
+   - action_points.md (extracted action items)
+   - people.md (contacts from emails)
+   - projects.md (projects mentioned in emails)
+   - MEMORY.md (email summaries and key information)
 
-**Cron (every 30 min):** `*/30 * * * * ~/.claude/scripts/sync-notion-memory.sh >> /tmp/sync-notion-memory.log 2>&1`
+Start with whatever context you have, and memory builds over time.
 
-- **Bidirectional:** changes from Notion are pulled; local changes are sent to Notion.
-- **Timestamp:** always uses the most recent version (Notion vs local).
-- **Skip:** if there are no changes on either side, the script exits with "No updates" without doing anything.
-- **1Password CLI:** the Notion token is obtained via `op read`. Configure in `~/.claude/scripts/sync-notion-memory.conf` (optional).
-
-## Structure in ~/.claude/
+## Memory Structure in ~/.claude/
 
 ```
 ~/.claude/
-├── memory/                    # Data synchronized from Notion
-│   ├── action_points.md
-│   ├── MEMORY.md
-│   ├── memory/                # Daily memory (YYYY-MM-DD.md)
-│   │   └── YYYY-MM-DD.md
+├── memory/
+│   ├── action_points.md                    # Your pending items
+│   ├── MEMORY.md                           # Executive memory
 │   └── memoria_agente/
-│       ├── user_profile.md
-│       ├── people.md
-│       └── ...
-├── scripts/
-│   └── sync-notion-memory.sh  # Sync Notion → memory/
+│       ├── user_profile.md                 # Your profile
+│       ├── people.md                       # Key contacts
+│       ├── projects.md                     # Current projects
+│       └── decisions.md                    # Important decisions
 └── skills/
     └── pre-meeting/
         └── SKILL.md
 ```
 
-## Automatic mode (cron + Slack)
+## How to Maximize Briefing Quality
 
-A script runs every 10 minutes (`meeting_prepper_wrapper.sh`):
+**Immediately after setup:**
+- Fill your profile: `~/.claude/memory/memoria_agente/user_profile.md`
+- Add key people: `~/.claude/memory/memoria_agente/people.md`
+- List projects: `~/.claude/memory/memoria_agente/projects.md`
 
-1. Queries **Google Calendar** — next meeting in the next 30 minutes
-2. Gets title, participants, and description
-3. Generates briefing via Claude (same prompt and sources)
-4. Sends **Slack DM** to `U01DHE5U6MA`
+**Over time:**
+- Use `/read-this` to save important documents and notes
+- Enable email automation (optional) to automatically populate memory
+- Update MEMORY.md with strategic context and decisions
 
-See `~/.claude/scripts/README-meeting-prepper.md` for configuration (1Password, cron, etc.).
+The more context you provide, the better your briefings will be.
 
 ---
 
 ## Summary
 
-1. Get meeting title (and if possible participants and description).
-2. Read `~/.claude/memory/action_points.md`, `~/.claude/memory/memory/YYYY-MM-DD.md`, `~/.claude/memory/memoria_agente/*.md`, `~/.claude/memory/MEMORY.md`.
-3. Generate briefing with the template **Active Pending Items** + **Historical Context**.
-4. Show the briefing to the user. If memory/ is empty, suggest running sync.
+1. Get meeting title (and if possible participants and description)
+2. Read available memory files: action_points.md, memoria_agente/*.md, MEMORY.md
+3. Generate briefing with template: **Active Pending Items** + **Historical Context**
+4. Show briefing to user in chat
+5. Note: Memory grows over time as you populate it manually or via email automation
