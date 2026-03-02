@@ -4,34 +4,43 @@ Automated onboarding system for Claude Code with secure credential management, s
 
 ## Features
 
+### Core Features (Available Immediately)
+
 ✨ **Automatic Setup**
 - One-command installation with interactive configuration
 - Automatic directory structure creation
 - Secure credential storage (Keychain/Secret Service)
+
+📚 **Three Powerful Skills**
+- **`/read-this`** - Read Google Docs and add summaries to memory
+- **`/pre-meeting`** - Generate meeting briefings (grows with memory)
+- **`/remind-me`** - Create action points from text or Slack
+
+🧠 **Memory System**
+- Daily memory notes (`~/.claude/memory/`)
+- Action points tracking
+- User profile context
+- Manual updates via skills
 
 🔐 **Security-First**
 - Credentials stored in OS-native keychain (macOS/Linux)
 - OpenSSL AES-256 fallback encryption
 - No secrets in version control
 - Transparent permission disclosure
+- **Never** performs actions on your behalf (except sending your own briefings to Slack DM)
 
-📚 **Three Powerful Skills**
-- **read-this** - Read Google Docs and add summaries to memory
-- **pre-meeting** - Generate meeting briefings with context
-- **remind-me** - Create action points from Slack messages
+### Advanced Features (Optional Setup)
 
-🧠 **Memory System**
-- Daily memory notes (`~/.claude/memory/`)
-- Action points tracking
-- User profile context
-- Automatic synchronization
-
-📧 **Email Automation** *(Optional)*
+📧 **Email Automation**
 - Automatically check Gmail every 10 minutes
 - Use Gemini AI to process and summarize emails
 - Extract action items and save to memory
+- Populate memory files automatically (people, projects, dates)
 - Organize notes by date and topic
-- Perfect for capturing email-based action items
+- Auto-close action items when they're resolved
+- Perfect for capturing email-based context for meetings
+
+**Status:** Requires 15-minute additional setup with Google Cloud and Gemini API
 
 ## Quick Start
 
@@ -84,6 +93,24 @@ pip3 install -r requirements.txt
    ```bash
    bash ~/.claude/scripts/validate.sh
    ```
+
+## What Works Immediately After Setup
+
+### ✅ Ready to Use Now
+- **`/read-this`** - Read Google Docs, local files, and URLs; save summaries to memory
+- **`/pre-meeting`** - Generate meeting briefings from your memory (note: limited context initially)
+- **`/remind-me`** - Create action points from text or Slack messages
+- **Google OAuth** - Access Google Drive/Calendar (configured during setup if you choose)
+- **Slack Configuration** - Set up Slack integration (configured during setup if you choose)
+
+### ⏳ Requires Additional Setup (15 minutes)
+- **Email Automation** - Automatically process emails every 10 minutes
+- **Memory Auto-Population** - Fill your memory files from email content
+- **Full `/pre-meeting` Context** - Requires email automation to populate memory
+
+**If you want email automation now:** Follow [GETTING_STARTED_EMAIL.md](./docs/GETTING_STARTED_EMAIL.md) (15-minute setup guide)
+
+**If you want to set it up later:** Your core skills work great without it. You can add email automation anytime by following the setup guide.
 
 ## What Gets Installed
 
@@ -145,16 +172,29 @@ See [SETUP_GUIDE.md](./SETUP_GUIDE.md#security-disclosure) for detailed security
 
 ### The Setup Process (10 Phases)
 
+**Automatic Setup - Takes ~5 minutes:**
 1. **Dependencies Check** - Verify required system tools
-2. **Python Packages** - Automatically install Python dependencies (google-auth, Gemini, Slack SDK, etc.)
+2. **Python Packages** - Automatically install Python dependencies
 3. **Directory Structure** - Create `~/.claude/` directories
-4. **Google OAuth** - Authorize access to Drive/Calendar (browser auto-opens)
-5. **Slack Configuration** - Configure Slack user token + Member ID
+4. **Google OAuth** - Authorize access to Drive/Calendar (optional, browser auto-opens)
+5. **Slack Configuration** - Configure Slack user token + Member ID (optional)
 6. **Security Review** - Review credential storage methods
 7. **Skill Registration** - Register skills in `~/.claude/claude.json`
 8. **Template Creation** - Initialize memory files
 9. **Validation** - Test all components
 10. **Summary** - Final checklist and next steps
+
+**After setup, your three skills are immediately ready to use.**
+
+### Optional: Email Automation Setup (15 minutes)
+
+If you want emails to automatically populate your memory:
+1. Create a Google Cloud Project and service account
+2. Get Gemini API key
+3. Configure email_config.json with your settings
+4. Add cron job to process emails every 10 minutes
+
+**See:** [GETTING_STARTED_EMAIL.md](./docs/GETTING_STARTED_EMAIL.md) for step-by-step guide
 
 ### Credential Storage
 

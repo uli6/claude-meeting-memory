@@ -858,8 +858,15 @@ WHAT'S INSTALLED:
   ✓ Skills: read-this, pre-meeting, remind-me
   ✓ Google OAuth configured
   ✓ Slack configured
+  ✓ Python dependencies installed
 
-NEXT STEPS:
+YOUR THREE SKILLS ARE READY NOW:
+
+  /read-this       - Read Google Docs and save to memory
+  /pre-meeting     - Generate meeting briefings
+  /remind-me       - Create action points from text/Slack
+
+IMMEDIATE NEXT STEPS:
 
   1. Fill your profile:
      nano ~/.claude/memory/memoria_agente/perfil_usuario.md
@@ -869,17 +876,22 @@ NEXT STEPS:
      /pre-meeting
      /remind-me Check the deadline
 
-  3. View documentation:
-     cat ~/.claude/CLAUDE.md
-
-  4. Verify everything works:
+  3. Verify everything works:
      bash ~/.claude/scripts/validate.sh
 
+OPTIONAL: Email Automation (15 minutes)
+
+  For automatic email processing and memory auto-population:
+  → Follow: https://github.com/uli6/claude-meeting-memory/docs/GETTING_STARTED_EMAIL.md
+
+  This will let emails automatically populate your memory and enhance
+  your /pre-meeting briefings with email context.
+
 IMPORTANT LINKS:
-  📖 Documentation: See ~/.claude/CLAUDE.md
-  🔐 Security: https://github.com/uli6/claude-meeting-memory/docs/TROUBLESHOOTING.md
-  🆘 Issues: https://github.com/uli6/claude-meeting-memory/issues
-  📚 Guides: https://github.com/uli6/claude-meeting-memory
+  📖 Main Documentation: ~/.claude/CLAUDE.md
+  🔐 Security & Safety: See SAFETY_GUARANTEE.md in the repo
+  🆘 Need Help: https://github.com/uli6/claude-meeting-memory/issues
+  📚 All Guides: https://github.com/uli6/claude-meeting-memory
 
 You're all set! Start using your Claude Meeting Memory system. 🚀
 SUMMARY_INFO
