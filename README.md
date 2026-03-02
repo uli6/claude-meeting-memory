@@ -26,6 +26,13 @@ Automated onboarding system for Claude Code with secure credential management, s
 - User profile context
 - Automatic synchronization
 
+📧 **Email Automation** *(Optional)*
+- Automatically check Gmail every 10 minutes
+- Use Gemini AI to process and summarize emails
+- Extract action items and save to memory
+- Organize notes by date and topic
+- Perfect for capturing email-based action items
+
 ## Quick Start
 
 ### Installation (One Command)
@@ -92,6 +99,11 @@ See [SETUP_GUIDE.md](./SETUP_GUIDE.md#security-disclosure) for detailed security
 **Using the Skills:**
 - **[HOW_TO_USE.md](./docs/HOW_TO_USE.md)** - Complete guide to all three skills with examples
 - **[CRONTAB_SETUP.md](./docs/CRONTAB_SETUP.md)** - Enable automatic briefings every 10 minutes
+
+**Email Automation (NEW!):**
+- **[GETTING_STARTED_EMAIL.md](./docs/GETTING_STARTED_EMAIL.md)** - Quick 15-minute setup for email automation
+- **[EMAIL_AUTOMATION.md](./docs/EMAIL_AUTOMATION.md)** - Complete email automation guide with Gemini integration
+- **[EMAIL_CONFIG_REFERENCE.md](./docs/EMAIL_CONFIG_REFERENCE.md)** - Full configuration reference with examples
 
 **Credentials & Configuration:**
 - **[docs/GOOGLE_OAUTH_SETUP.md](./docs/GOOGLE_OAUTH_SETUP.md)** - Getting Google OAuth credentials
