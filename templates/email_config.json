@@ -1,0 +1,76 @@
+{
+  "gmail": {
+    "enabled": true,
+    "service_account_json": "~/.claude/secrets/gmail-service-account.json",
+    "email": "your-gmail@gmail.com",
+    "labels_to_check": [
+      "INBOX",
+      "IMPORTANT"
+    ],
+    "max_results": 10,
+    "exclude_labels": [
+      "SPAM",
+      "TRASH",
+      "ARCHIVED"
+    ]
+  },
+  "gemini": {
+    "enabled": true,
+    "model": "gemini-1.5-flash",
+    "temperature": 0.7,
+    "max_tokens": 1000
+  },
+  "filtering": {
+    "max_age_days": 1,
+    "min_content_length": 50,
+    "priority_keywords": [
+      "urgent",
+      "action required",
+      "decision needed",
+      "follow-up"
+    ],
+    "ignore_subjects": [
+      "unsubscribe",
+      "marketing",
+      "newsletter",
+      "promotional"
+    ]
+  },
+  "memory": {
+    "save_location": "~/.claude/memory/memoria_agente",
+    "include_sender_files": true,
+    "organize_by_date": true,
+    "update_action_points": true,
+    "action_points_file": "~/.claude/memory/action_points.md"
+  },
+  "gemini_notes": {
+    "enabled": true,
+    "organize_in_subdirectory": true,
+    "extract_action_items": true,
+    "extract_dates": true,
+    "extract_key_points": true
+  },
+  "automation": {
+    "cron_interval": "*/10 * * * *",
+    "cron_description": "Every 10 minutes",
+    "max_concurrent_runs": 1,
+    "timeout_seconds": 300,
+    "retry_on_failure": true,
+    "retry_count": 3,
+    "retry_delay_seconds": 60
+  },
+  "logging": {
+    "enabled": true,
+    "log_file": "~/.claude/logs/email_memory.log",
+    "log_level": "INFO",
+    "max_log_size_mb": 10,
+    "archive_old_logs": true
+  },
+  "security": {
+    "verify_ssl": true,
+    "use_keychain": true,
+    "keychain_fallback": "openssl-aes-256",
+    "credentials_ttl_hours": 24,
+    "mask_secrets_in_logs": true
+  }
+}

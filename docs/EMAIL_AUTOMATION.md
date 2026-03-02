@@ -136,36 +136,81 @@ nano ~/.claude/config/email_config.json
 
 Create `~/.claude/config/email_config.json`:
 
+**Quick Start:** Copy the example configuration file:
+```bash
+cp ~/templates/email_config.json ~/.claude/config/email_config.json
+nano ~/.claude/config/email_config.json  # Edit with your settings
+```
+
+**Full Configuration Options:**
+
 ```json
 {
   "gmail": {
     "enabled": true,
     "service_account_json": "~/.claude/secrets/gmail-service-account.json",
-    "user_email": "your-email@gmail.com",
-    "check_interval_minutes": 10,
+    "email": "your-gmail@gmail.com",
     "labels_to_check": ["INBOX", "IMPORTANT"],
-    "max_results": 5
+    "max_results": 10,
+    "exclude_labels": ["SPAM", "TRASH", "ARCHIVED"]
   },
   "gemini": {
     "enabled": true,
-    "api_key": "~/.claude/secrets/gemini-api-key",
     "model": "gemini-1.5-flash",
-    "temperature": 0.3
-  },
-  "memory": {
-    "save_location": "~/.claude/memory/memoria_agente/",
-    "organize_by": "date_and_topic",
-    "include_sender_files": true,
-    "update_action_points": true
+    "temperature": 0.7,
+    "max_tokens": 1000
   },
   "filtering": {
-    "ignore_labels": ["SPAM", "TRASH"],
-    "min_content_length": 50,
     "max_age_days": 1,
-    "priority_keywords": ["urgent", "deadline", "action", "decision"]
+    "min_content_length": 50,
+    "priority_keywords": ["urgent", "action required", "decision needed"],
+    "ignore_subjects": ["unsubscribe", "marketing", "newsletter"]
+  },
+  "memory": {
+    "save_location": "~/.claude/memory/memoria_agente",
+    "include_sender_files": true,
+    "organize_by_date": true,
+    "update_action_points": true,
+    "action_points_file": "~/.claude/memory/action_points.md"
+  },
+  "gemini_notes": {
+    "enabled": true,
+    "organize_in_subdirectory": true,
+    "extract_action_items": true,
+    "extract_dates": true,
+    "extract_key_points": true
+  },
+  "automation": {
+    "cron_interval": "*/10 * * * *",
+    "cron_description": "Every 10 minutes",
+    "timeout_seconds": 300,
+    "retry_on_failure": true
+  },
+  "logging": {
+    "enabled": true,
+    "log_file": "~/.claude/logs/email_memory.log",
+    "log_level": "INFO"
+  },
+  "security": {
+    "verify_ssl": true,
+    "use_keychain": true,
+    "mask_secrets_in_logs": true
   }
 }
 ```
+
+**Key Configuration Sections:**
+
+| Section | Purpose | Key Options |
+|---------|---------|------------|
+| `gmail` | Gmail API access | service account path, email labels, max results |
+| `gemini` | Gemini AI settings | model selection, temperature, token limits |
+| `filtering` | Email filtering | age limit, content length, keywords, ignore patterns |
+| `memory` | Note storage | directory path, organization, action point updates |
+| `gemini_notes` | Special handling | subdirectory organization, extraction options |
+| `automation` | Cron scheduling | interval, timeout, retry settings |
+| `logging` | Log management | file path, log level, file rotation |
+| `security` | Security settings | SSL verification, keychain usage, secret masking |
 
 ### Environment Setup
 
