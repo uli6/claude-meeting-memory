@@ -35,20 +35,36 @@ Automated onboarding system for Claude Code with secure credential management, s
 
 ## Quick Start
 
+### Prerequisites
+
+**Required:**
+- **Claude Code** - Installed at `~/.claude` (install from [anthropics/claude-code](https://github.com/anthropics/claude-code))
+- **macOS** or **Linux** (Windows Git Bash supported)
+- bash 4+
+- curl
+- python3 (3.8 or higher)
+- jq (for JSON processing)
+- openssl (for credential encryption fallback)
+
 ### Installation (One Command)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/uli6/claude-meeting-memory/main/setup.sh | bash
 ```
 
-### Prerequisites
+### Python Dependencies
 
-- **macOS** or **Linux** (Windows Git Bash supported)
-- bash 4+
-- curl
-- python3
-- jq (for JSON processing)
-- openssl (for credential encryption fallback)
+The setup script automatically installs required Python packages:
+- `google-auth` - Google authentication
+- `google-auth-oauthlib` - OAuth flow
+- `google-api-client` - Google APIs
+- `google-generativeai` - Gemini AI (for email automation)
+- `slack-sdk` - Slack integration
+
+Or install manually:
+```bash
+pip3 install -r requirements.txt
+```
 
 ### After Installation
 
@@ -71,13 +87,17 @@ curl -fsSL https://raw.githubusercontent.com/uli6/claude-meeting-memory/main/set
 
 ## What Gets Installed
 
+This setup adds the following to your existing Claude Code installation at `~/.claude`:
+
 | Component | Location | Purpose |
 |-----------|----------|---------|
 | **Memory directories** | `~/.claude/memory/` | Daily notes, action points, context |
 | **Scripts** | `~/.claude/scripts/` | Helper scripts for skills |
 | **Skills** | `~/.claude/skills/` | read-this, pre-meeting, remind-me |
 | **Credentials** | Keychain/Secret Service | Google OAuth + Slack tokens |
-| **Configuration** | `~/.claude/claude.json` | Skill registration |
+| **Configuration** | `~/.claude/claude.json` | Skill registration (updated with new skills) |
+
+**Note:** Claude Code must be installed first. If `~/.claude` doesn't exist, setup will fail with a clear error message.
 
 ## Security & Permissions
 
@@ -87,8 +107,11 @@ This setup handles sensitive information securely. **Important:**
 - ✅ No credentials sent to external services
 - ✅ You can revoke access anytime
 - ✅ Setup shows transparent permission disclosures
+- ✅ **NEVER performs actions on your behalf** - Only reads data and stores locally
 
 See [SETUP_GUIDE.md](./SETUP_GUIDE.md#security-disclosure) for detailed security information.
+
+**[Read SAFETY_GUARANTEE.md](./SAFETY_GUARANTEE.md)** - Complete transparency on what the system can and cannot do.
 
 ## Documentation
 
@@ -120,17 +143,18 @@ See [SETUP_GUIDE.md](./SETUP_GUIDE.md#security-disclosure) for detailed security
 
 ## How It Works
 
-### The Setup Process (9 Phases)
+### The Setup Process (10 Phases)
 
-1. **Dependencies Check** - Verify required tools
-2. **Directory Structure** - Create `~/.claude/` directories
-3. **Google OAuth** - Authorize access to Drive/Calendar (browser auto-opens)
-4. **Slack Configuration** - Configure Slack user token + Member ID
-5. **Security Review** - Review credential storage methods
-6. **Skill Registration** - Register skills in `~/.claude/claude.json`
-7. **Template Creation** - Initialize memory files
-8. **Validation** - Test all components
-9. **Summary** - Final checklist and next steps
+1. **Dependencies Check** - Verify required system tools
+2. **Python Packages** - Automatically install Python dependencies (google-auth, Gemini, Slack SDK, etc.)
+3. **Directory Structure** - Create `~/.claude/` directories
+4. **Google OAuth** - Authorize access to Drive/Calendar (browser auto-opens)
+5. **Slack Configuration** - Configure Slack user token + Member ID
+6. **Security Review** - Review credential storage methods
+7. **Skill Registration** - Register skills in `~/.claude/claude.json`
+8. **Template Creation** - Initialize memory files
+9. **Validation** - Test all components
+10. **Summary** - Final checklist and next steps
 
 ### Credential Storage
 

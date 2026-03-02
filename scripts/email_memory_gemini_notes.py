@@ -297,6 +297,120 @@ class GeminiNotesProcessor:
         except Exception as e:
             print(f"  Warning: Failed to extract action items: {e}", file=sys.stderr)
 
+    def extract_projects(self, parsed_data: Dict, email_content: Dict) -> None:
+        """Extract projects from Gemini note"""
+        try:
+            projects_path = self.memory_path / "projects.md"
+
+            # Use topics from Gemini parsing as project indicators
+            if parsed_data.get('topics'):
+                with open(projects_path, 'a') as f:
+                    f.write(f"\n### {parsed_data.get('title', email_content['subject'])}\n")
+                    f.write(f"- **Source:** Gemini Notes\n")
+                    f.write(f"- **Date:** {datetime.now().strftime('%Y-%m-%d')}\n")
+                    f.write(f"- **Status:** Active\n")
+                    f.write(f"- **Topics:** {', '.join(parsed_data['topics'])}\n\n")
+
+                print(f"  ✓ Updated projects")
+        except Exception as e:
+            print(f"  Warning: Failed to extract projects: {e}", file=sys.stderr)
+
+    def update_memory_summary(self, parsed_data: Dict, email_content: Dict) -> None:
+        """Update MEMORY.md with Gemini note context"""
+        try:
+            memory_md_path = self.memory_path / "MEMORY.md"
+
+            # Ensure file has structure
+            existing_content = ""
+            if memory_md_path.exists():
+                with open(memory_md_path, 'r') as f:
+                    existing_content = f.read()
+
+            if not existing_content.strip():
+                existing_content = "# Executive Memory\n\n## Key Notes\n\n"
+
+            # Append Gemini note to MEMORY.md
+            with open(memory_md_path, 'a') as f:
+                f.write(f"### {parsed_data.get('title', email_content['subject'])}\n")
+                f.write(f"**Date:** {datetime.now().strftime('%Y-%m-%d')}\n\n")
+
+                if parsed_data.get('key_points'):
+                    f.write("**Key Points:**\n")
+                    for point in parsed_data['key_points']:
+                        f.write(f"- {point}\n")
+                    f.write("\n")
+
+                if parsed_data.get('dates'):
+                    f.write("**Important Dates:**\n")
+                    for date in parsed_data['dates']:
+                        f.write(f"- {date}\n")
+                    f.write("\n")
+
+            print(f"  ✓ Updated MEMORY.md")
+        except Exception as e:
+            print(f"  Warning: Failed to update MEMORY.md: {e}", file=sys.stderr)
+
+    def check_and_close_action_items(self, parsed_data: Dict, email_content: Dict) -> None:
+        """Check if Gemini note content resolves any open action items"""
+        try:
+            # Read open action items
+            if not self.action_points_path.exists():
+                return
+
+            with open(self.action_points_path, 'r') as f:
+                content = f.read()
+
+            lines = content.split('\n')
+            updated_lines = []
+            closed_items = []
+
+            # Combine note title and key points for analysis
+            note_full_text = f"{parsed_data.get('title', '')} {' '.join(parsed_data.get('key_points', []))}".lower()
+
+            # Process each line
+            for line in lines:
+                # Check if this is an unclosed action item
+                if line.strip().startswith('- [ ]'):
+                    # Extract the action item text
+                    action_text = line.split('- [ ]')[1].strip()
+
+                    # Simple keyword matching: check if key words from action appear in note
+                    action_words = action_text.lower().split()
+                    # Filter out common words
+                    action_keywords = [w for w in action_words if len(w) > 3 and w not in ['with', 'from', 'about', 'this']]
+
+                    # Check if multiple keywords match in note content
+                    matches = sum(1 for keyword in action_keywords if keyword in note_full_text)
+
+                    # If at least 2 keywords match (or 50%+ of keywords), consider it closed
+                    if action_keywords and (matches >= 2 or matches >= len(action_keywords) * 0.5):
+                        # Mark as completed
+                        completed_line = line.replace('- [ ]', '- [x]')
+                        updated_lines.append(completed_line)
+                        closed_items.append(action_text)
+                        # Add note about when it was closed
+                        updated_lines.append(f"  - Closed: {datetime.now().strftime('%Y-%m-%d')}")
+                    else:
+                        updated_lines.append(line)
+                else:
+                    updated_lines.append(line)
+
+            # Write back if items were closed
+            if closed_items:
+                with open(self.action_points_path, 'w') as f:
+                    f.write('\n'.join(updated_lines))
+
+                print(f"  ✓ Closed {len(closed_items)} action item(s):")
+                for item in closed_items:
+                    print(f"    - {item[:60]}...")
+            else:
+                # No items closed, but write back to ensure consistency
+                with open(self.action_points_path, 'w') as f:
+                    f.write('\n'.join(updated_lines))
+
+        except Exception as e:
+            print(f"  Warning: Failed to check action items: {e}", file=sys.stderr)
+
     def run(self) -> None:
         """Main processing loop"""
         try:
@@ -332,6 +446,15 @@ class GeminiNotesProcessor:
 
                 # Extract action items
                 self.extract_action_items(parsed)
+
+                # Extract projects
+                self.extract_projects(parsed, email_content)
+
+                # Update executive memory
+                self.update_memory_summary(parsed, email_content)
+
+                # Check if this note closes any open action items
+                self.check_and_close_action_items(parsed, email_content)
 
                 processed_count += 1
 

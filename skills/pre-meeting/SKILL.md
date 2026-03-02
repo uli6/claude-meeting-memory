@@ -1,104 +1,104 @@
 ---
 name: meeting-prepper
-description: Prepara briefings executivos antes de reuniões. Lê pendências (action_points), memória diária, memoria_agente e MEMORY.md; gera briefing estruturado (Pendências Ativas + Contexto Histórico). Use quando o utilizador pedir briefing de reunião, meeting prepper, ou preparação para reunião.
+description: "Generates executive briefings before meetings. Reads action points, daily memory, memoria_agente and MEMORY.md; generates structured briefing (Active Pending Items + Historical Context). Use when the user asks for meeting briefing, meeting prepper, or meeting preparation."
 ---
 
-# Meeting Prepper (Skill para Claude Code)
+# Meeting Prepper (Claude Code Skill)
 
-Gera briefing executivo antes de reuniões usando pendências e memória em `~/.claude/memory/`. Os dados são sincronizados do Notion via script; a skill apenas lê os ficheiros locais.
+Generates executive briefing before meetings using pending items and memory in `~/.claude/memory/`. Data is synchronized from Notion via script; the skill only reads local files.
 
-**Fonte:** [Clawdia Memory](https://www.notion.so/Clawdia-Memory-312d9a25aaca80689a81cbe3376ab260) no Notion. Sincronizar com `~/.claude/scripts/sync-notion-memory.sh` antes de gerar briefings.
+**Source:** [Clawdia Memory](https://www.notion.so/Clawdia-Memory-312d9a25aaca80689a81cbe3376ab260) on Notion. Synchronize with `~/.claude/scripts/sync-notion-memory.sh` before generating briefings.
 
-**Fluxo de negócio:** Ver [FLUXO_NEGOCIO.md](FLUXO_NEGOCIO.md) para o fluxo completo (automático + sob pedido).
+**Business flow:** See [BUSINESS_FLOW.md](BUSINESS_FLOW.md) for the complete flow (automatic + on-demand).
 
-## Como executar (Claude Code)
+## How to execute (Claude Code)
 
-Escreve no chat uma destas frases:
+Write one of these phrases in the chat:
 
-- **"Briefing da reunião"** ou **"Meeting prepper"**
-- **"Prepara-me para a reunião"**
-- **"O que tenho de saber para a reunião [título]?"**
+- **"Meeting briefing"** or **"Meeting prepper"**
+- **"Prepare me for the meeting"**
+- **"What do I need to know for the meeting [title]?"**
 
-Se não indicares título/participantes, o Claude pede. Podes colar dados do calendário ou convite.
+If you don't specify title/participants, Claude will ask. You can paste calendar or invite data.
 
 ---
 
-## Quando usar
+## When to use
 
-- Utilizador pede "briefing da reunião", "meeting prepper", "prepara-me para a reunião" ou "o que tenho de saber para a reunião X".
-- Utilizador partilha título/participantes/descrição de uma reunião e quer um resumo com pendências e contexto.
+- User asks for "meeting briefing", "meeting prepper", "prepare me for the meeting" or "what do I need to know for meeting X".
+- User shares meeting title/participants/description and wants a summary with pending items and context.
 
-## Fluxo (o que fazer)
+## Flow (what to do)
 
-### 1. Obter dados da reunião
+### 1. Get meeting data
 
-- Se o utilizador já indicou **título**, **participantes** e (opcional) **descrição**, usar esses dados.
-- Se não: pedir ao utilizador que indique a reunião (título e, se possível, participantes e descrição) ou que cole os dados do calendário / convite.
+- If the user already provided **title**, **participants**, and (optional) **description**, use that data.
+- If not: ask the user to provide the meeting details (title and if possible participants and description) or to paste calendar/invite data.
 
-### 2. Ler os ficheiros em ~/.claude/memory/
+### 2. Read files in ~/.claude/memory/
 
-Todos os paths são em `~/.claude/memory/` (ou `$HOME/.claude/memory/`).
+All paths are in `~/.claude/memory/` (or `$HOME/.claude/memory/`).
 
-| Ficheiro | Propósito |
-|----------|-----------|
-| `~/.claude/memory/action_points.md` | Pendências ativas (itens não marcados com `[x]`) — **fonte para "Pendências Ativas"** |
-| `~/.claude/memory/memory/YYYY-MM-DD.md` | Memória diária do dia (substituir YYYY-MM-DD pela data de hoje) |
-| `~/.claude/memory/memoria_agente/*.md` | Perfil, pessoas, projetos, pendencias, etc. |
-| `~/.claude/memory/MEMORY.md` | Memória executiva geral — contexto estratégico e próximos passos |
+| File | Purpose |
+|------|---------|
+| `~/.claude/memory/action_points.md` | Active pending items (items not marked with `[x]`) — **source for "Active Pending Items"** |
+| `~/.claude/memory/memory/YYYY-MM-DD.md` | Daily memory (replace YYYY-MM-DD with today's date) |
+| `~/.claude/memory/memoria_agente/*.md` | Profile, people, projects, pending items, etc. |
+| `~/.claude/memory/MEMORY.md` | General executive memory — strategic context and next steps |
 
-- Ler todos os `.md` em `~/.claude/memory/memoria_agente/` que existam.
-- Se algum ficheiro não existir, prosseguir com os que existirem e indicar brevemente o que faltou.
-- Se a pasta `~/.claude/memory/memory/` estiver vazia ou não existir, sugerir ao utilizador executar o sync: `~/.claude/scripts/sync-notion-memory.sh`
+- Read all `.md` files in `~/.claude/memory/memoria_agente/` that exist.
+- If any file doesn't exist, continue with the ones that do and briefly note what's missing.
+- If the `~/.claude/memory/memory/` folder is empty or missing, suggest the user run sync: `~/.claude/scripts/sync-notion-memory.sh`
 
-### 3. Gerar o briefing com este formato exato
+### 3. Generate the briefing with this exact format
 
-Produzir um **Briefing Executivo** estruturado assim:
+Produce an **Executive Briefing** structured like this:
 
 ```
-🔥 PENDÊNCIAS ATIVAS:
-(Listar APENAS os itens não marcados com [x] do action_points.md que sejam relevantes para os participantes desta reunião ou para o tema. Se não houver, escrever "Nenhuma pendência ativa".)
+🔥 ACTIVE PENDING ITEMS:
+(List ONLY the items not marked with [x] from action_points.md that are relevant to this meeting's participants or topic. If none, write "No active pending items".)
 
-📚 CONTEXTO HISTÓRICO:
-(Resumo conciso das notas do dia, memoria_agente e MEMORY.md relevantes para esta reunião: projetos, pessoas, decisões, risk assessment, etc. Ser direto.)
+📚 HISTORICAL CONTEXT:
+(Concise summary of daily notes, memoria_agente and MEMORY.md relevant to this meeting: projects, people, decisions, risk assessment, etc. Be direct.)
 ```
 
-Regras:
+Rules:
 
-- Incluir sempre a secção **Pendências Ativas**; não omitir mesmo que sejam poucas.
-- Filtrar pendências por relevância aos participantes ou ao título da reunião quando possível.
-- Contexto histórico: só o que for útil para essa reunião; evitar texto genérico.
+- Always include the **Active Pending Items** section; don't omit even if there are few.
+- Filter pending items by relevance to participants or meeting title when possible.
+- Historical context: only what's useful for this meeting; avoid generic text.
 
-### 4. Entregar o resultado
+### 4. Deliver the result
 
-- Mostrar o briefing ao utilizador no chat.
+- Show the briefing to the user in the chat.
 
-## Sync (bidirecional: Notion ↔ ~/.claude/memory/)
+## Sync (bidirectional: Notion ↔ ~/.claude/memory/)
 
-Antes de gerar briefings, sincronizar:
+Before generating briefings, synchronize:
 
 ```bash
 ~/.claude/scripts/sync-notion-memory.sh
 ```
 
-**Cron (a cada 30 min):** `*/30 * * * * ~/.claude/scripts/sync-notion-memory.sh >> /tmp/sync-notion-memory.log 2>&1`
+**Cron (every 30 min):** `*/30 * * * * ~/.claude/scripts/sync-notion-memory.sh >> /tmp/sync-notion-memory.log 2>&1`
 
-- **Bidirecional:** alterações no Notion são puxadas; alterações locais são enviadas para o Notion.
-- **Timestamp:** usa sempre a versão mais recente (Notion vs local).
-- **Skip:** se não houver alterações em nenhum lado, o script termina com "No updates" sem fazer nada.
-- **1Password CLI:** o token da Notion é obtido via `op read`. Configurar em `~/.claude/scripts/sync-notion-memory.conf` (opcional).
+- **Bidirectional:** changes from Notion are pulled; local changes are sent to Notion.
+- **Timestamp:** always uses the most recent version (Notion vs local).
+- **Skip:** if there are no changes on either side, the script exits with "No updates" without doing anything.
+- **1Password CLI:** the Notion token is obtained via `op read`. Configure in `~/.claude/scripts/sync-notion-memory.conf` (optional).
 
-## Estrutura em ~/.claude/
+## Structure in ~/.claude/
 
 ```
 ~/.claude/
-├── memory/                    # Dados sincronizados do Notion
+├── memory/                    # Data synchronized from Notion
 │   ├── action_points.md
 │   ├── MEMORY.md
-│   ├── memory/                # Memória diária (YYYY-MM-DD.md)
+│   ├── memory/                # Daily memory (YYYY-MM-DD.md)
 │   │   └── YYYY-MM-DD.md
 │   └── memoria_agente/
-│       ├── perfil_usuario.md
-│       ├── pessoas.md
+│       ├── user_profile.md
+│       ├── people.md
 │       └── ...
 ├── scripts/
 │   └── sync-notion-memory.sh  # Sync Notion → memory/
@@ -107,22 +107,22 @@ Antes de gerar briefings, sincronizar:
         └── SKILL.md
 ```
 
-## Modo automático (cron + Slack)
+## Automatic mode (cron + Slack)
 
-Um script corre a cada 10 minutos (`meeting_prepper_wrapper.sh`):
+A script runs every 10 minutes (`meeting_prepper_wrapper.sh`):
 
-1. Consulta **Google Calendar** — próxima reunião nos próximos 30 min
-2. Obtém título, participantes e descrição
-3. Gera briefing via Claude (mesmo prompt e fontes)
-4. Envia **DM no Slack** para `U01DHE5U6MA`
+1. Queries **Google Calendar** — next meeting in the next 30 minutes
+2. Gets title, participants, and description
+3. Generates briefing via Claude (same prompt and sources)
+4. Sends **Slack DM** to `U01DHE5U6MA`
 
-Ver `~/.claude/scripts/README-meeting-prepper.md` para configuração (1Password, cron, etc.).
+See `~/.claude/scripts/README-meeting-prepper.md` for configuration (1Password, cron, etc.).
 
 ---
 
-## Resumo
+## Summary
 
-1. Obter título (e se possível participantes e descrição) da reunião.
-2. Ler `~/.claude/memory/action_points.md`, `~/.claude/memory/memory/YYYY-MM-DD.md`, `~/.claude/memory/memoria_agente/*.md`, `~/.claude/memory/MEMORY.md`.
-3. Gerar briefing com o template **Pendências Ativas** + **Contexto Histórico**.
-4. Mostrar o briefing ao utilizador. Se memory/ estiver vazio, sugerir executar o sync.
+1. Get meeting title (and if possible participants and description).
+2. Read `~/.claude/memory/action_points.md`, `~/.claude/memory/memory/YYYY-MM-DD.md`, `~/.claude/memory/memoria_agente/*.md`, `~/.claude/memory/MEMORY.md`.
+3. Generate briefing with the template **Active Pending Items** + **Historical Context**.
+4. Show the briefing to the user. If memory/ is empty, suggest running sync.

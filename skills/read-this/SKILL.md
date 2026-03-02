@@ -1,91 +1,91 @@
 ---
 name: read-this
-description: "Lê documentos/links e adiciona resumo à memória. docs.google.com → EXECUTAR read_google_doc_wrapper.sh (Bash) — NUNCA curl, Python inline ou copy-paste sem tentar."
+description: "Reads documents/links and adds summary to memory. docs.google.com → RUN read_google_doc_wrapper.sh (Bash) — NEVER curl, Python inline or copy-paste without trying."
 ---
 
-# Read This (Leitura e Memória)
+# Read This (Reading and Memory)
 
-## ⚠️ GOOGLE DOCS — REGRA CRÍTICA
+## ⚠️ GOOGLE DOCS — CRITICAL RULE
 
-**Link docs.google.com → ÚNICA ação permitida:** executar este comando exato na ferramenta Bash:
+**Link docs.google.com → ONLY permitted action:** execute this exact command in the Bash tool:
 
 ```
-~/.claude/scripts/read_google_doc_wrapper.sh "URL_COLADO_PELO_UTILIZADOR"
+~/.claude/scripts/read_google_doc_wrapper.sh "URL_PASTED_BY_USER"
 ```
 
-**PROIBIDO:** curl, Python inline, OAuth manual, "abordagem diferente", verificar credenciais, ler secrets, assumir que falha.
-**PROIBIDO:** Sugerir "copie e cole" sem ter executado o wrapper e recebido erro real.
+**FORBIDDEN:** curl, Python inline, manual OAuth, "different approach", checking credentials, reading secrets, assuming it fails.
+**FORBIDDEN:** Suggesting "copy and paste" without executing the wrapper first and receiving a real error.
 
-**Exemplo:** URL `https://docs.google.com/document/d/1IwRSIsIhtOEk93lPjzdGYF3So6kPylju4ZtPSgjlczc/edit` → comando: `~/.claude/scripts/read_google_doc_wrapper.sh "https://docs.google.com/document/d/1IwRSIsIhtOEk93lPjzdGYF3So6kPylju4ZtPSgjlczc/edit"`
+**Example:** URL `https://docs.google.com/document/d/1IwRSIsIhtOEk93lPjzdGYF3So6kPylju4ZtPSgjlczc/edit` → command: `~/.claude/scripts/read_google_doc_wrapper.sh "https://docs.google.com/document/d/1IwRSIsIhtOEk93lPjzdGYF3So6kPylju4ZtPSgjlczc/edit"`
 
 ---
 
-Quando o utilizador disser **"leia isso"**, **"leia esse documento"**, **"leia esse link"** ou similar — ler o conteúdo, gerar um resumo e **adicionar à memória diária** para a base de conhecimento.
+When the user says **"read this"**, **"read this document"**, **"read this link"** or similar — read the content, generate a summary, and **add to daily memory** for the knowledge base.
 
-## Gatilhos
+## Triggers
 
-- "leia isso" (com ficheiro, documento ou link anexado/colado)
-- "leia esse documento"
-- "leia esse link"
-- "read this" / "read this document" / "read this link"
+- "read this" (with file, document, or link attached/pasted)
+- "read this document"
+- "read this link"
+- "read this" / "read that document" / "read that link"
 
-## Fluxo
+## Flow
 
-### 1. Identificar a fonte
+### 1. Identify the source
 
-- **Ficheiro local**: path no sistema (ex.: `~/Downloads/doc.pdf`, `./relatorio.md`)
-- **URL genérica**: usar `mcp_web_fetch` para obter o conteúdo
-- **Google Docs** (`https://docs.google.com/document/...`): usar o script `read_google_doc.py` com credenciais do 1Password
+- **Local file**: path in system (e.g., `~/Downloads/doc.pdf`, `./report.md`)
+- **Generic URL**: use `mcp_web_fetch` to get content
+- **Google Docs** (`https://docs.google.com/document/...`): use the script `read_google_doc.py` with 1Password credentials
 
-### 2. Obter o conteúdo
+### 2. Get the content
 
-| Tipo | Ação |
-|------|------|
-| Ficheiro `.md`, `.txt`, etc. | Ler com a ferramenta `Read` |
-| URL (exceto Google Docs) | Usar `mcp_web_fetch` |
-| Google Docs | **Primeira ação:** usar a ferramenta **Bash** com: `~/.claude/scripts/read_google_doc_wrapper.sh "URL"` — nunca sugerir copy-paste sem executar primeiro |
+| Type | Action |
+|------|--------|
+| File `.md`, `.txt`, etc. | Read with the `Read` tool |
+| URL (except Google Docs) | Use `mcp_web_fetch` |
+| Google Docs | **First action:** use **Bash** tool with: `~/.claude/scripts/read_google_doc_wrapper.sh "URL"` — never suggest copy-paste without executing first |
 
-**Exemplo para Google Docs:** Se o utilizador colar `https://docs.google.com/document/d/1IwRS.../edit`, a primeira ação é `Bash(~/.claude/scripts/read_google_doc_wrapper.sh "https://docs.google.com/document/d/1IwRS.../edit")`.
+**Example for Google Docs:** If user pastes `https://docs.google.com/document/d/1IwRS.../edit`, the first action is `Bash(~/.claude/scripts/read_google_doc_wrapper.sh "https://docs.google.com/document/d/1IwRS.../edit")`.
 
-**Importante:** Para links `https://docs.google.com/` (Documentos, Sheets, etc.) — as credenciais estão no 1Password em **iFood Google** (já configurado em `meeting-prepper-secrets.env` com `op://OpenClaw/iFood Google/client_id`, etc.).
+**Important:** For links `https://docs.google.com/` (Docs, Sheets, etc.) — credentials are in 1Password under **iFood Google** (already configured in `meeting-prepper-secrets.env` with `op://OpenClaw/iFood Google/client_id`, etc.).
 
-### 3. Gerar resumo
+### 3. Generate summary
 
-Criar um resumo conciso (3–8 parágrafos) que capture:
-- Título/assunto principal
-- Pontos-chave e conclusões
-- Informação relevante para decisões ou follow-up
+Create a concise summary (3–8 paragraphs) that captures:
+- Title/main topic
+- Key points and conclusions
+- Information relevant for decisions or follow-up
 
-### 4. Adicionar à memória diária
+### 4. Add to daily memory
 
-- **Ficheiro de destino:** `~/.claude/memory/memoria_agente/memory_YYYY-MM-DD.md.md`
-- **Formato** (append no final do ficheiro):
+- **Destination file:** `~/.claude/memory/memoria_agente/memory_YYYY-MM-DD.md.md`
+- **Format** (append at end of file):
 
 ```markdown
 ---
 
-## 📝 Resumo: [Título ou descrição breve]
-**Fonte:** [path ou URL] | **Data:** YYYY-MM-DD HH:MM
+## 📝 Summary: [Title or brief description]
+**Source:** [path or URL] | **Date:** YYYY-MM-DD HH:MM
 
-[Resumo gerado]
+[Generated summary]
 ```
 
-- Se o ficheiro do dia não existir, criar em `memoria_agente/memory_YYYY-MM-DD.md.md`.
+- If the day's file doesn't exist, create it in `memoria_agente/memory_YYYY-MM-DD.md.md`.
 
-### 5. Confirmar ao utilizador
+### 5. Confirm to user
 
-Informar que o conteúdo foi lido e o resumo foi adicionado à memória diária. Mencionar que pode sincronizar com o Notion com `~/.claude/scripts/sync-notion-memory.sh` se quiser.
+Inform that the content was read and the summary was added to daily memory. Mention that they can sync with Notion with `~/.claude/scripts/sync-notion-memory.sh` if they want.
 
 ## Paths
 
-| Recurso | Path |
-|---------|------|
-| Wrapper Google Docs | `~/.claude/scripts/read_google_doc_wrapper.sh` |
+| Resource | Path |
+|----------|------|
+| Google Docs Wrapper | `~/.claude/scripts/read_google_doc_wrapper.sh` |
 | Secrets (1Password) | `~/.claude/scripts/meeting-prepper-secrets.env` |
-| Memória diária | `~/.claude/memory/memoria_agente/memory_YYYY-MM-DD.md.md` |
+| Daily memory | `~/.claude/memory/memoria_agente/memory_YYYY-MM-DD.md.md` |
 | Sync Notion | `~/.claude/scripts/sync-notion-memory.sh` |
 
-## Notas
+## Notes
 
-- O `meeting-prepper-secrets.env` já contém as referências ao 1Password para **iFood Google** (client_id, client_secret, refresh_token). O mesmo ficheiro serve para o Meeting Prepper e para ler Google Docs.
-- Se o documento Google exigir permissões adicionais, o utilizador pode precisar de reautorizar a aplicação no Google Cloud Console com o scope `https://www.googleapis.com/auth/documents.readonly`.
+- The `meeting-prepper-secrets.env` already contains references to 1Password for **iFood Google** (client_id, client_secret, refresh_token). The same file is used for Meeting Prepper and for reading Google Docs.
+- If the Google document requires additional permissions, the user may need to reauthorize the application in Google Cloud Console with the scope `https://www.googleapis.com/auth/documents.readonly`.

@@ -172,18 +172,95 @@ phase_1_checks() {
     bash_version=$(bash --version | head -1)
     print_success "bash: $bash_version"
 
+    # Check Claude Code installation
+    if [[ ! -d "$CLAUDE_HOME" ]]; then
+        echo ""
+        print_error "Claude Code not found at $CLAUDE_HOME"
+        echo ""
+        echo "This project requires Claude Code to be installed."
+        echo "Install it first:"
+        echo "  https://github.com/anthropics/claude-code"
+        echo ""
+        exit 1
+    fi
+
+    print_success "Claude Code: found at $CLAUDE_HOME"
+
     echo ""
     print_success "All system requirements met!"
     echo ""
 
     # Show checklist
     echo "Setup will:"
+    echo "  ✓ Install Python dependencies"
     echo "  ✓ Create ~/.claude/ directory structure"
     echo "  ✓ Configure Google OAuth (Drive + Calendar)"
     echo "  ✓ Configure Slack credentials (user token + member ID)"
     echo "  ✓ Register three skills (read-this, pre-meeting, remind-me)"
     echo "  ✓ Create template memory files"
     echo "  ✓ Validate all configurations"
+    echo ""
+}
+
+################################################################################
+# Phase 1.5: Python Dependencies
+################################################################################
+
+phase_1_5_python_deps() {
+    print_header "Phase 1.5: Installing Python Dependencies"
+    echo ""
+
+    echo "Installing required Python packages..."
+    echo ""
+
+    # List of required packages
+    local packages=(
+        "google-auth>=2.25.0"
+        "google-auth-oauthlib>=1.2.0"
+        "google-auth-httplib2>=0.2.0"
+        "google-api-client>=1.12.0"
+        "google-generativeai>=0.3.0"
+        "slack-sdk>=3.27.0"
+    )
+
+    # Try to install using pip3
+    if ! python3 -m pip install --upgrade pip >/dev/null 2>&1; then
+        print_warning "Could not upgrade pip, continuing anyway..."
+    fi
+
+    local failed=0
+    for package in "${packages[@]}"; do
+        # Extract package name (before >=, ==, etc.)
+        local pkg_name=${package%%[><=]*}
+
+        if python3 -m pip install "$package" >/dev/null 2>&1; then
+            print_success "Installed: $pkg_name"
+        else
+            print_error "Failed to install: $pkg_name"
+            failed=$((failed + 1))
+        fi
+    done
+
+    echo ""
+
+    if [[ $failed -gt 0 ]]; then
+        print_error "$failed package(s) failed to install"
+        echo ""
+        echo "Try installing manually:"
+        echo "  pip3 install -r requirements.txt"
+        echo ""
+        echo "Or install individual packages:"
+        for package in "${packages[@]}"; do
+            echo "  pip3 install '$package'"
+        done
+        echo ""
+        if ! ask_yes_no "Continue setup anyway?"; then
+            exit 1
+        fi
+    else
+        print_success "All Python dependencies installed successfully!"
+    fi
+
     echo ""
 }
 
@@ -838,6 +915,8 @@ WELCOME
         print_error "Setup cancelled"
         exit 0
     fi
+
+    phase_1_5_python_deps
 
     phase_2_directories
 

@@ -347,6 +347,169 @@ Keep the summary concise and well-structured for memory storage."""
         except Exception as e:
             print(f"  Warning: Failed to extract action items: {e}", file=sys.stderr)
 
+    def extract_people(self, email_content: Dict) -> None:
+        """Extract sender info and add to people.md"""
+        try:
+            from_email = email_content['from']
+            if '<' in from_email:
+                sender_email = from_email.split('<')[-1].rstrip('>')
+                sender_name = from_email.split('<')[0].strip()
+            else:
+                sender_email = from_email
+                sender_name = from_email.split('@')[0]
+
+            people_path = self.memory_path / "people.md"
+
+            # Read existing people to avoid duplicates
+            existing_people = set()
+            if people_path.exists():
+                with open(people_path, 'r') as f:
+                    content = f.read()
+                    # Simple check: if person already mentioned, skip
+                    if sender_email in content or sender_name in content:
+                        return
+
+            # Append to people.md
+            with open(people_path, 'a') as f:
+                f.write(f"\n## {sender_name}\n")
+                f.write(f"- **Email:** {sender_email}\n")
+                f.write(f"- **Last contact:** {email_content['date']}\n")
+                f.write(f"- **Subject:** {email_content['subject']}\n\n")
+
+            print(f"  ✓ Added person: {sender_name}")
+        except Exception as e:
+            print(f"  Warning: Failed to extract people: {e}", file=sys.stderr)
+
+    def extract_projects(self, processed_content: str, email_content: Dict) -> None:
+        """Extract project keywords and add to projects.md"""
+        try:
+            import re
+
+            projects_path = self.memory_path / "projects.md"
+
+            # Look for project-related keywords in email and content
+            project_keywords = ['project', 'initiative', 'program', 'campaign', 'product', 'release', 'milestone']
+
+            found_projects = []
+            combined_text = (email_content['subject'] + ' ' + processed_content).lower()
+
+            for keyword in project_keywords:
+                if keyword in combined_text:
+                    found_projects.append(keyword.capitalize())
+
+            if found_projects:
+                # Read existing projects
+                existing_content = ""
+                if projects_path.exists():
+                    with open(projects_path, 'r') as f:
+                        existing_content = f.read()
+
+                # Append new projects (with simple deduplication)
+                with open(projects_path, 'a') as f:
+                    sender = email_content['from'].split('<')[0].strip() if '<' in email_content['from'] else email_content['from']
+                    f.write(f"\n### {email_content['subject']}\n")
+                    f.write(f"- **From:** {sender}\n")
+                    f.write(f"- **Date:** {email_content['date']}\n")
+                    f.write(f"- **Status:** Active\n")
+                    f.write(f"- **Keywords:** {', '.join(found_projects)}\n\n")
+
+                print(f"  ✓ Updated projects with: {', '.join(found_projects)}")
+        except Exception as e:
+            print(f"  Warning: Failed to extract projects: {e}", file=sys.stderr)
+
+    def update_memory_summary(self, email_content: Dict, processed_content: str) -> None:
+        """Update MEMORY.md with email context"""
+        try:
+            memory_md_path = self.memory_path / "MEMORY.md"
+
+            # Read existing content
+            existing_content = ""
+            if memory_md_path.exists():
+                with open(memory_md_path, 'r') as f:
+                    existing_content = f.read()
+
+            # Ensure file has structure
+            if "## Recent Communications" not in existing_content:
+                if not existing_content.strip():
+                    existing_content = "# Executive Memory\n\n## Recent Communications\n\n"
+                else:
+                    # Add section before summary if it doesn't exist
+                    if "## Recent Communications" not in existing_content:
+                        existing_content += "\n## Recent Communications\n\n"
+
+            # Append email summary
+            sender = email_content['from'].split('<')[0].strip() if '<' in email_content['from'] else email_content['from']
+
+            with open(memory_md_path, 'a') as f:
+                f.write(f"### {email_content['subject']}\n")
+                f.write(f"**From:** {sender} | **Date:** {email_content['date']}\n\n")
+                f.write(f"{processed_content[:500]}...\n\n")  # First 500 chars of summary
+
+            print(f"  ✓ Updated MEMORY.md")
+        except Exception as e:
+            print(f"  Warning: Failed to update MEMORY.md: {e}", file=sys.stderr)
+
+    def check_and_close_action_items(self, processed_content: str, email_subject: str) -> None:
+        """Check if email content resolves any open action items"""
+        try:
+            # Read open action items
+            if not self.action_points_path.exists():
+                return
+
+            with open(self.action_points_path, 'r') as f:
+                content = f.read()
+
+            lines = content.split('\n')
+            updated_lines = []
+            closed_items = []
+
+            # Combine email subject and processed content for analysis
+            email_full_text = f"{email_subject}\n{processed_content}".lower()
+
+            # Process each line
+            for i, line in enumerate(lines):
+                # Check if this is an unclosed action item
+                if line.strip().startswith('- [ ]'):
+                    # Extract the action item text
+                    action_text = line.split('- [ ]')[1].strip()
+
+                    # Simple keyword matching: check if key words from action appear in email
+                    action_words = action_text.lower().split()
+                    # Filter out common words
+                    action_keywords = [w for w in action_words if len(w) > 3 and w not in ['with', 'from', 'about', 'this']]
+
+                    # Check if multiple keywords match in email content
+                    matches = sum(1 for keyword in action_keywords if keyword in email_full_text)
+
+                    # If at least 2 keywords match (or 50%+ of keywords), consider it closed
+                    if action_keywords and (matches >= 2 or matches >= len(action_keywords) * 0.5):
+                        # Mark as completed
+                        completed_line = line.replace('- [ ]', '- [x]')
+                        updated_lines.append(completed_line)
+                        closed_items.append(action_text)
+                        # Add note about when it was closed
+                        updated_lines.append(f"  - Closed: {datetime.now().strftime('%Y-%m-%d')}")
+                    else:
+                        updated_lines.append(line)
+                else:
+                    updated_lines.append(line)
+
+            # Write back if items were closed
+            if closed_items:
+                with open(self.action_points_path, 'w') as f:
+                    f.write('\n'.join(updated_lines))
+
+                print(f"  ✓ Closed {len(closed_items)} action item(s):")
+                for item in closed_items:
+                    print(f"    - {item[:60]}...")
+            else:
+                # No items closed, but write back to ensure consistency
+                with open(self.action_points_path, 'w') as f:
+                    f.write('\n'.join(updated_lines))
+
+        except Exception as e:
+            print(f"  Warning: Failed to check action items: {e}", file=sys.stderr)
+
     def run(self) -> None:
         """Main automation loop"""
         try:
@@ -391,6 +554,18 @@ Keep the summary concise and well-structured for memory storage."""
 
                 # Extract action items
                 self.extract_action_items(processed, email_content)
+
+                # Extract people
+                self.extract_people(email_content)
+
+                # Extract projects
+                self.extract_projects(processed, email_content)
+
+                # Update executive memory
+                self.update_memory_summary(email_content, processed)
+
+                # Check if this email closes any open action items
+                self.check_and_close_action_items(processed, email_content['subject'])
 
                 processed_count += 1
 

@@ -5,13 +5,31 @@ Common issues and solutions for Claude Meeting Memory setup and usage.
 ## Table of Contents
 
 1. [Setup Issues](#setup-issues)
-2. [Credential Issues](#credential-issues)
-3. [Skill Issues](#skill-issues)
-4. [Security & Permissions](#security--permissions)
-5. [Platform-Specific Issues](#platform-specific-issues)
-6. [Advanced Diagnostics](#advanced-diagnostics)
+2. [Python Dependencies](#python-dependencies)
+3. [Credential Issues](#credential-issues)
+4. [Skill Issues](#skill-issues)
+5. [Security & Permissions](#security--permissions)
+6. [Platform-Specific Issues](#platform-specific-issues)
+7. [Advanced Diagnostics](#advanced-diagnostics)
 
 ## Setup Issues
+
+### "Claude Code not found at ~/.claude"
+
+**Problem:** Claude Code is not installed or not at the expected location.
+
+**Solution:**
+
+This project requires Claude Code to be installed first. Install it from:
+```bash
+# Visit: https://github.com/anthropics/claude-code
+# Or install via your package manager
+
+# After installation, verify Claude Code is at ~/.claude:
+ls -la ~/.claude/
+```
+
+**Why it matters:** The project adds skills and configuration to your existing Claude Code installation.
 
 ### "Command not found: curl/python3/jq"
 
@@ -125,6 +143,74 @@ sudo yum install jq      # CentOS/RHEL
 # Verify
 jq --version
 ```
+
+## Python Dependencies
+
+### "ModuleNotFoundError: No module named 'google'"
+
+**Problem:** Python packages are not installed.
+
+**Solution:**
+
+The setup script automatically installs Python dependencies. If you skip this phase or encounter errors:
+
+```bash
+# Install all required packages
+pip3 install -r requirements.txt
+
+# Or install individually
+pip3 install google-auth google-auth-oauthlib google-api-client google-generativeai slack-sdk
+```
+
+**Why it matters:** Email automation and credential management require these packages.
+
+### "pip3: command not found"
+
+**Problem:** pip3 is not installed with your Python installation.
+
+**Solution:**
+
+```bash
+# macOS
+brew install python3
+
+# Ubuntu/Debian
+sudo apt-get install python3-pip
+
+# CentOS/RHEL
+sudo yum install python3-pip
+
+# Then verify
+pip3 --version
+```
+
+### "Permission denied when installing packages"
+
+**Problem:** You don't have permission to install system-wide.
+
+**Solution:**
+
+```bash
+# Install for current user only
+pip3 install --user google-auth google-auth-oauthlib google-api-client google-generativeai slack-sdk
+
+# Or use a virtual environment (recommended)
+python3 -m venv ~/claude-venv
+source ~/claude-venv/bin/activate
+pip3 install -r requirements.txt
+```
+
+### Email automation shows "ModuleNotFoundError: No module named 'google.generativeai'"
+
+**Problem:** Google Generative AI (Gemini) package is not installed.
+
+**Solution:**
+
+```bash
+pip3 install google-generativeai
+```
+
+This package is specifically required for email automation with Gemini AI.
 
 ## Credential Issues
 
