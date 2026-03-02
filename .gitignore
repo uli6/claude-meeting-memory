@@ -1,0 +1,48 @@
+# Environment and credentials
+.env
+.env.local
+.env.*.local
+.secrets.enc
+.secrets.key
+
+# OS specific
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Logs
+*.log
+.claude.log
+
+# Local testing
+/tmp/
+/test-output/

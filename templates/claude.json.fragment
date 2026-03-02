@@ -1,0 +1,35 @@
+{
+  "skills": [
+    {
+      "name": "read-this",
+      "description": "Lê Google Docs e adiciona resumos à memória. Use: /read-this URL",
+      "enabled": true,
+      "path": "~/.claude/skills/read-this/SKILL.md",
+      "permissions": [
+        "google:drive:read",
+        "local:memory:write"
+      ]
+    },
+    {
+      "name": "pre-meeting",
+      "description": "Prepara briefings executivos antes de reuniões usando calendar + memory. Use: /pre-meeting",
+      "enabled": true,
+      "path": "~/.claude/skills/pre-meeting/SKILL.md",
+      "permissions": [
+        "google:calendar:read",
+        "slack:send",
+        "local:memory:read"
+      ]
+    },
+    {
+      "name": "remind-me",
+      "description": "Cria action points em memory a partir de mensagens Slack. Use: /remind-me texto ou /remind-me URL",
+      "enabled": true,
+      "path": "~/.claude/skills/remind-me/SKILL.md",
+      "permissions": [
+        "slack:read",
+        "local:memory:write"
+      ]
+    }
+  ]
+}
