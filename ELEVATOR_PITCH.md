@@ -363,6 +363,11 @@ A: Yes, just delete the files and credentials (instructions in docs).
 curl -fsSL https://raw.githubusercontent.com/uli6/claude-meeting-memory/main/setup.sh | bash
 ```
 
+**Reinstall (reset & reconfigure):**
+```bash
+bash setup.sh --reinstall
+```
+
 ### 📖 Want to Learn More?
 
 **Quick Start (5 min):**

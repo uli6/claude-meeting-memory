@@ -68,6 +68,38 @@ cd claude-meeting-memory
 bash setup.sh
 ```
 
+### Option 4: Reinstall (Reconfigure from Scratch)
+
+If you want to reset your installation and start over:
+
+```bash
+# Download the latest setup script
+curl -fsSL https://raw.githubusercontent.com/uli6/claude-meeting-memory/main/setup.sh -o setup.sh
+
+# Run with --reinstall flag
+bash setup.sh --reinstall
+```
+
+**What --reinstall does:**
+- Removes old credentials (Keychain/Secret Service)
+- Removes old memory files (except your user profile)
+- Removes old scripts and skills
+- Removes crontab entry
+- Preserves your user profile
+- Continues with fresh setup
+
+**Use cases:**
+- Reconfigure credentials from scratch
+- Fix broken installation
+- Switch between workspaces
+- Reset all settings
+
+### Option 5: Help
+
+```bash
+bash setup.sh --help
+```
+
 ## Setup Process (11 Phases)
 
 The setup script will guide you through 11 phases (including two automated phases):

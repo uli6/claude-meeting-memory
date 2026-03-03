@@ -61,6 +61,20 @@ Automated onboarding system for Claude Code with secure credential management, s
 curl -fsSL https://raw.githubusercontent.com/uli6/claude-meeting-memory/main/setup.sh | bash
 ```
 
+### Reinstall (Reconfigure from Scratch)
+
+```bash
+bash setup.sh --reinstall
+```
+
+This removes your old configuration but preserves your user profile, then runs setup fresh.
+
+### Help
+
+```bash
+bash setup.sh --help
+```
+
 ### Python Dependencies
 
 The setup script automatically installs required Python packages:

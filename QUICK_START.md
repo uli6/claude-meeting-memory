@@ -4,6 +4,7 @@ Get up and running in 5 minutes.
 
 ## Installation (1 minute)
 
+### First Time Setup
 ```bash
 curl -fsSL https://raw.githubusercontent.com/uli6/claude-meeting-memory/main/setup.sh | bash
 ```
@@ -14,6 +15,14 @@ Follow the interactive prompts:
 3. Enter Slack token + Member ID
 4. Accept security disclaimer
 5. Done!
+
+### Reconfigure from Scratch
+If you want to reset everything and start over:
+```bash
+bash setup.sh --reinstall
+```
+
+This removes old configuration but preserves your user profile.
 
 **Troubleshooting:** See [SETUP_GUIDE.md](./SETUP_GUIDE.md#troubleshooting)
 
