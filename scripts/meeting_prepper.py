@@ -1,28 +1,20 @@
 #!/usr/bin/env python3
 """
-Meeting Prepper (modo automático)
-- Consulta Google Calendar: próxima reunião nos próximos 30 min
-- Gera briefing via Claude (action_points, memory, memoria_agente, MEMORY.md)
-- Envia DM para Slack (U01DHE5U6MA)
+Meeting Prepper (on-demand mode)
+- Reads emails via Himalaya IMAP for meeting context
+- Generates briefing via Claude (action_points, memory, memoria_agente, MEMORY.md)
+- Delivered via chat in Claude Code
 
-Executar via meeting_prepper_wrapper.sh (carrega secrets do 1Password).
-Cron: */10 * * * * (a cada 10 min)
+This script is called by the /pre-meeting skill in Claude Code.
+No longer cron-based; it's on-demand only.
 
-Em redes corporativas com VPN: export GOOGLE_SKIP_SSL_VERIFY=1
+For corporate networks with VPN: export GOOGLE_SKIP_SSL_VERIFY=1 (for requests lib)
 """
 import os
-import ssl
-from datetime import datetime, timedelta
+import subprocess
+from datetime import datetime
 from pathlib import Path
 
-# VPN/proxy corporativo: bypass SSL para todas as conexões HTTPS
-if os.environ.get("GOOGLE_SKIP_SSL_VERIFY") == "1" or os.environ.get("SLACK_SKIP_SSL_VERIFY") == "1":
-    ssl._create_default_https_context = ssl._create_unverified_context
-
-# User ID do destinatário da DM. Definir SLACK_DM_USER_ID em meeting-prepper-secrets.env.
-# Obter em Slack: perfil > Mais > Copiar ID do membro (ex: U01DHE5U6MA)
-SLACK_USER_ID = os.environ.get("SLACK_DM_USER_ID", "U01DHE5U6MA")
-PROCESSED_FILE = ".processed_meetings.txt"
 MEMORY_DIR = Path(os.environ.get("MEMORY_DIR", os.path.expanduser("~/.claude/memory")))
 
 
@@ -33,120 +25,91 @@ def get_env(name: str, default: str = None) -> str:
     return val
 
 
-def fetch_next_meeting():
-    """Obtém a próxima reunião do Google Calendar (janela 30 min)."""
-    import httplib2
-    import requests
-    from google.oauth2.credentials import Credentials
-    from google.auth.transport.requests import Request
-    from google_auth_httplib2 import AuthorizedHttp
-    from googleapiclient.discovery import build
+def fetch_emails_from_himalaya(query_terms: list[str], limit: int = 50) -> list[dict]:
+    """
+    Gets emails via Himalaya CLI.
 
-    client_id = get_env("GOOGLE_CAL_CLIENT_ID")
-    client_secret = get_env("GOOGLE_CAL_CLIENT_SECRET")
-    refresh_token = get_env("GOOGLE_CAL_REFRESH_TOKEN")
+    Args:
+        query_terms: List of search keywords (meeting title, participants, etc.)
+        limit: Maximum number of emails to read
 
-    creds = Credentials(
-        token=None,
-        refresh_token=refresh_token,
-        token_uri="https://oauth2.googleapis.com/token",
-        client_id=client_id,
-        client_secret=client_secret,
-        scopes=["https://www.googleapis.com/auth/calendar.events.readonly"],
-    )
-    # Token refresh: usar session com verify=False em redes corporativas
-    if os.environ.get("GOOGLE_SKIP_SSL_VERIFY") == "1":
-        session = requests.Session()
-        session.verify = False
-        import urllib3
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        creds.refresh(Request(session=session))
-    else:
-        creds.refresh(Request())
-
-    # HTTP com SSL desativado (VPN/proxy corporativo)
-    http = httplib2.Http(disable_ssl_certificate_validation=(os.environ.get("GOOGLE_SKIP_SSL_VERIFY") == "1"))
-    http = AuthorizedHttp(creds, http=http)
-    service = build("calendar", "v3", http=http)
-    now = datetime.utcnow()
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    today_end = today_start + timedelta(days=1)
-
-    # Regra "Ausente": evento todo-o-dia "Ausente" hoje → não processar
-    day_events = (
-        service.events()
-        .list(
-            calendarId="primary",
-            timeMin=today_start.isoformat() + "Z",
-            timeMax=today_end.isoformat() + "Z",
-            singleEvents=True,
+    Returns:
+        List of dicts with From, Subject, Date, Body from found emails
+    """
+    try:
+        # Get list of envelopes (last N emails)
+        result = subprocess.run(
+            ["himalaya", "envelope", "list", "--limit", str(limit)],
+            capture_output=True,
+            text=True,
+            timeout=10
         )
-        .execute()
-    )
-    for ev in day_events.get("items", []):
-        if ev.get("status") == "cancelled":
-            continue
-        title = (ev.get("summary") or "").lower()
-        if "ausente" in title:
-            start = ev.get("start", {})
-            if start.get("date"):  # all-day
-                print("Dia marcado como Ausente. Meeting Prepper não executa.")
-                return None
+        if result.returncode != 0:
+            print(f"Himalaya error: {result.stderr}")
+            return []
 
-    time_min = now.isoformat() + "Z"
-    time_max = (now + timedelta(minutes=30)).isoformat() + "Z"
+        emails = []
+        lines = result.stdout.strip().split("\n")
 
-    events = (
-        service.events()
-        .list(
-            calendarId="primary",
-            timeMin=time_min,
-            timeMax=time_max,
-            singleEvents=True,
-            orderBy="startTime",
-        )
-        .execute()
-    )
+        # Parse: each line is an envelope (UID Subject From Date)
+        # Format: "uid | subject | from | date"
+        for line in lines:
+            if not line.strip():
+                continue
+            parts = line.split("|")
+            if len(parts) < 4:
+                continue
 
-    items = events.get("items", [])
-    for ev in items:
-        if ev.get("status") == "cancelled":
-            continue
-        title = ev.get("summary", "(Sem título)")
-        if "ausente" in title.lower():
-            continue
-        attendees = ev.get("attendees") or []
-        if not attendees:
-            continue
-        participants = [a.get("email", a.get("displayName", "?")) for a in attendees]
-        description = ev.get("description", "") or ""
-        start = ev.get("start", {}).get("dateTime") or ev.get("start", {}).get("date", "")
-        uid = ev.get("id") or f"{title}|{start}"
-        return {
-            "uid": uid,
-            "title": title,
-            "participants": participants,
-            "description": description,
-            "start": start,
-        }
-    return None
+            uid = parts[0].strip()
+            subject = parts[1].strip()
+            from_addr = parts[2].strip()
+            date = parts[3].strip()
 
+            # Check if any search term is in subject or from
+            match = any(
+                term.lower() in subject.lower() or term.lower() in from_addr.lower()
+                for term in query_terms
+                if term.strip()
+            )
 
-def is_processed(uid: str) -> bool:
-    f = MEMORY_DIR / PROCESSED_FILE
-    if not f.exists():
-        return False
-    return uid.strip() in {line.strip() for line in f.read_text().splitlines() if line.strip()}
+            if match:
+                # Try to read email body
+                body = ""
+                try:
+                    read_result = subprocess.run(
+                        ["himalaya", "read", uid],
+                        capture_output=True,
+                        text=True,
+                        timeout=5
+                    )
+                    if read_result.returncode == 0:
+                        body = read_result.stdout[:500]  # First 500 chars
+                except:
+                    pass
 
+                emails.append({
+                    "uid": uid,
+                    "subject": subject,
+                    "from": from_addr,
+                    "date": date,
+                    "body": body
+                })
 
-def mark_processed(uid: str) -> None:
-    (MEMORY_DIR / PROCESSED_FILE).parent.mkdir(parents=True, exist_ok=True)
-    with open(MEMORY_DIR / PROCESSED_FILE, "a") as f:
-        f.write(uid + "\n")
+                # Limit to 10 emails for context
+                if len(emails) >= 10:
+                    break
+
+        return emails
+    except FileNotFoundError:
+        print("Himalaya not found. Install it: brew install himalaya (or apt install himalaya)")
+        return []
+    except Exception as e:
+        print(f"Error fetching emails: {e}")
+        return []
 
 
 def _load_claude_settings() -> dict:
-    """Carrega ~/.claude/settings.json e aplica env. Retorna o objeto settings."""
+    """Loads ~/.claude/settings.json and applies env. Returns the settings object."""
     settings_path = Path(os.path.expanduser("~/.claude/settings.json"))
     if not settings_path.exists():
         return {}
@@ -163,18 +126,18 @@ def _load_claude_settings() -> dict:
 
 
 def _get_auth_token() -> str:
-    """Obtém token: ANTHROPIC_API_KEY > ~/.config/tompero/requester_token > apiKeyHelper (ifood_auth)."""
+    """Gets token: ANTHROPIC_API_KEY > ~/.config/tompero/requester_token > apiKeyHelper (ifood_auth)."""
     # 1. Env (meeting-prepper-secrets.env)
     token = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     if token:
         return token
-    # 2. Ficheiro tompero (cron-friendly: sem executar tompero)
+    # 2. tompero file (cron-friendly: without running tompero)
     token_file = Path.home() / ".config" / "tompero" / "requester_token"
     if token_file.is_file():
         token = token_file.read_text(encoding="utf-8").strip()
         if token:
             return token
-    # 3. apiKeyHelper do settings.json (ifood_auth.sh ou cat ~/.config/tompero/requester_token)
+    # 3. apiKeyHelper from settings.json (ifood_auth.sh or cat ~/.config/tompero/requester_token)
     settings = _load_claude_settings()
     helper = settings.get("apiKeyHelper", "~/.claude/ifood_auth.sh")
     helper = os.path.expanduser(helper)
@@ -186,7 +149,7 @@ def _get_auth_token() -> str:
                 return token
         except subprocess.CalledProcessError:
             pass
-    # 4. Se helper for comando (ex: "cat ~/.config/tompero/requester_token")
+    # 4. If helper is a command (e.g., "cat ~/.config/tompero/requester_token")
     if " " in helper or not os.path.isfile(helper):
         import subprocess
         try:
@@ -195,18 +158,18 @@ def _get_auth_token() -> str:
                 return token
         except (subprocess.CalledProcessError, FileNotFoundError):
             pass
-    raise SystemExit("Token não obtido. Verificar: ANTHROPIC_API_KEY, ~/.config/tompero/requester_token, ou apiKeyHelper em settings.json")
+    raise SystemExit("Token not obtained. Check: ANTHROPIC_API_KEY, ~/.config/tompero/requester_token, or apiKeyHelper in settings.json")
 
 
-def generate_briefing(meeting: dict) -> str:
-    """Gera briefing via GenPlat (HTTP direto). Usa config de ~/.claude/settings.json."""
+def generate_briefing(meeting: dict, emails: list[dict]) -> str:
+    """Generates briefing via API (HTTP direct). Uses config from ~/.claude/settings.json."""
     import requests
 
-    _load_claude_settings()  # aplica env de settings.json
+    _load_claude_settings()  # applies env from settings.json
     token = _get_auth_token()
     base_url = os.environ.get("ANTHROPIC_BASE_URL")
     if not base_url:
-        raise SystemExit("ANTHROPIC_BASE_URL não definido. Definir em ~/.claude/settings.json env ou no ambiente.")
+        raise SystemExit("ANTHROPIC_BASE_URL not defined. Set it in ~/.claude/settings.json env or environment.")
     custom_headers = {}
     if os.environ.get("ANTHROPIC_CUSTOM_HEADERS"):
         h = os.environ["ANTHROPIC_CUSTOM_HEADERS"]
@@ -215,33 +178,45 @@ def generate_briefing(meeting: dict) -> str:
             custom_headers[k.strip()] = v.strip()
 
     title = meeting["title"]
-    participants_str = ", ".join(meeting["participants"])
-    description = meeting["description"] or "(sem descrição)"
+    participants_str = ", ".join(meeting.get("participants", ["(not specified)"]))
+    description = meeting.get("description", "") or "(no description)"
 
-    prompt = f"""I have the following meeting in 30 minutes: {title}. Participants: {participants_str}. Description: {description}.
+    # Email context
+    email_context = ""
+    if emails:
+        email_context = "Recent emails relevant to this meeting:\n"
+        for email in emails[:10]:
+            email_context += f"- From: {email['from']}\n  Subject: {email['subject']}\n  Date: {email['date']}\n"
+            if email['body']:
+                email_context += f"  Preview: {email['body'][:200]}...\n"
+        email_context += "\n"
+
+    prompt = f"""I have the following meeting: {title}. Participants: {participants_str}. Description: {description}.
+
+{email_context}
 
 MANDATORY EXECUTION INSTRUCTIONS:
 1. Read IMMEDIATELY the file memory/action_points.md.
 2. Also read the daily memories: memory/* (and, if useful, other recent files in /memory/).
-3. For context on people, projects and profile: read the .md files in memoria_agente/ (e.g. perfil_usuario.md, pessoas.md, projetos.md, pendencias.md) and MEMORY.md if it exists. Use what is relevant for this meeting.
-4. **Conflitos:** Em decisões ou preferências conflituantes (duas versões da mesma regra em memoria_agente), usar apenas a entrada mais recente.
-5. Search for mentions of the participants in the memories and old files.
+3. For context on people, projects and profile: read the .md files in memoria_agente/ (e.g. user_profile.md, people.md, projects.md) and MEMORY.md if it exists. Use what is relevant for this meeting.
+4. **Conflicts:** When there are conflicting decisions or preferences (two versions of the same rule in memoria_agente), use only the most recent entry.
+5. If emails were provided above, search for key topics and participants mentioned.
 6. Generate an Executive Briefing structured exactly like this (output in English):
 
-🔥 ACTIVE ACTION ITEMS: (List here ONLY action items whose assignee (@Name) is one of the meeting participants: {participants_str}. Match by name (e.g. @Ulisses matches "Ulisses Oliveira"). Exclude items for people not in this meeting. Exclude items marked with [x]. Items with @Grupo or generic reminders: include only if relevant to these participants. If none match, say "No active action items").
+🔥 ACTIVE PENDING ITEMS: (List here ONLY action items that are relevant to this meeting. Match participants by name. Exclude items marked with [x]. If none match, say "No active pending items").
 
-📚 HISTORICAL CONTEXT: (Summary of old notes, daily memory, memoria_agente and MEMORY.md when relevant, Risk Assessment, etc).
+📚 HISTORICAL CONTEXT: (Summary of old notes, daily memory, memoria_agente and MEMORY.md when relevant, Risk Assessment, email topics, etc).
 
-Be direct and never skip the Active Action Items section."""
+Be direct and never skip the Active Pending Items section."""
 
-    # API max 200k tokens. ~1 token ≈ 4 chars. Usar ~50k tokens (~200k chars) para margem.
+    # API max 200k tokens. ~1 token ≈ 4 chars. Use ~50k tokens (~200k chars) for margin.
     MAX_CHARS = 200_000
 
     def _trunc(s: str, max_chars: int) -> str:
         s = (s or "").strip()
         if len(s) <= max_chars:
             return s
-        return s[: max_chars - 80] + "\n\n[... truncado por limite de contexto ...]"
+        return s[: max_chars - 80] + "\n\n[... truncated due to context limit ...]"
 
     memory_path = MEMORY_DIR
     action_points = (memory_path / "action_points.md").read_text(encoding="utf-8") if (memory_path / "action_points.md").exists() else ""
@@ -252,25 +227,26 @@ Be direct and never skip the Active Action Items section."""
         for f in files[:5]:
             memory_today += f"\n--- {f.name} ---\n" + f.read_text(encoding="utf-8")
     memoria_agente = ""
-    for f in sorted((memory_path / "memoria_agente").glob("*.md"), key=lambda p: p.stat().st_mtime, reverse=True):
-        memoria_agente += f"\n--- {f.name} ---\n" + f.read_text(encoding="utf-8")
+    if (memory_path / "memoria_agente").exists():
+        for f in sorted((memory_path / "memoria_agente").glob("*.md"), key=lambda p: p.stat().st_mtime, reverse=True):
+            memoria_agente += f"\n--- {f.name} ---\n" + f.read_text(encoding="utf-8")
     memory_md = (memory_path / "MEMORY.md").read_text(encoding="utf-8") if (memory_path / "MEMORY.md").exists() else ""
 
-    # Limites por secção (total ~200k chars)
+    # Limits per section (total ~200k chars)
     ap_max, mem_max, ma_max, mm_max = 20_000, 50_000, 80_000, 50_000
 
     context = f"""
 === action_points.md ===
 {_trunc(action_points, ap_max)}
 
-=== memory (hoje e recentes) ===
-{_trunc(memory_today, mem_max) or '(vazio)'}
+=== memory (today and recent) ===
+{_trunc(memory_today, mem_max) or '(empty)'}
 
 === memoria_agente ===
-{_trunc(memoria_agente, ma_max) or '(vazio)'}
+{_trunc(memoria_agente, ma_max) or '(empty)'}
 
 === MEMORY.md ===
-{_trunc(memory_md, mm_max) or '(vazio)'}
+{_trunc(memory_md, mm_max) or '(empty)'}
 """
 
     model = os.environ.get("ANTHROPIC_DEFAULT_SONNET_MODEL", "claude-sonnet-4-20250514")
@@ -296,139 +272,70 @@ Be direct and never skip the Active Action Items section."""
     return text.strip()
 
 
-def _briefing_to_slack(briefing: str, meeting_title: str) -> tuple[list, str]:
-    """Retorna (blocks para mensagem principal, texto estruturado para thread)."""
-    import re
+def main(meeting_title: str = "", participants: list[str] = None, description: str = ""):
+    """
+    Generates briefing for a meeting.
 
-    def _to_mrkdwn(text: str) -> str:
-        """Converte markdown para mrkdwn do Slack."""
-        text = (text or "").strip()
-        text = re.sub(r"\*\*(.+?)\*\*", r"*\1*", text)
-        text = re.sub(r"^-\s+", "• ", text, flags=re.M)
-        text = re.sub(r"^\d+\.\s+", "• ", text, flags=re.M)
-        text = re.sub(r"^\*\s+", "• ", text, flags=re.M)
-        return text
+    Args:
+        meeting_title: Meeting title
+        participants: List of participants (names/emails)
+        description: Meeting description
+    """
+    if not meeting_title:
+        raise SystemExit("meeting_title required")
 
-    pendencias = ""
-    contexto = ""
-    ctx_match = re.search(r"(?::books:|📚)\s*(?:\*\*)?(?:CONTEXTO HISTÓRICO|HISTORICAL CONTEXT)(?:\*\*)?\s*:?\s*\n+", briefing, re.I)
-    if ctx_match:
-        pendencias = briefing[: ctx_match.start()].strip()
-        contexto = briefing[ctx_match.end() :].strip()
-        for prefix in [":fire:", "🔥", "PENDÊNCIAS ATIVAS", "ACTIVE ACTION ITEMS", "pendências ativas"]:
-            if prefix.lower() in pendencias.lower():
-                idx = pendencias.lower().find(prefix.lower()) + len(prefix)
-                pendencias = pendencias[idx:].lstrip(":* \n").strip()
-                break
+    if participants is None:
+        participants = []
+
+    meeting = {
+        "title": meeting_title,
+        "participants": participants,
+        "description": description,
+    }
+
+    # Prepare search terms for emails
+    query_terms = [meeting_title]
+    query_terms.extend(participants)
+
+    print(f"Meeting Prepper: generating briefing for '{meeting_title}'")
+    print(f"Searching for related emails...")
+
+    # Search for emails
+    emails = fetch_emails_from_himalaya(query_terms)
+    if emails:
+        print(f"Found {len(emails)} relevant emails")
     else:
-        pendencias = briefing[:1500] if briefing else ""
+        print("No emails found (continuing with memory context)")
 
-    if not pendencias and not contexto:
-        pendencias = briefing[:800] if briefing else "Briefing vazio."
-
-    # Mensagem principal: só o intro
-    intro = f"Here is your briefing for the meeting *{meeting_title}*"
-    main_blocks = [
-        {"type": "section", "text": {"type": "mrkdwn", "text": intro}},
-        {"type": "context", "elements": [{"type": "mrkdwn", "text": "⏱ You have 30 minutes. See thread for full briefing."}]},
-    ]
-
-    # Thread: briefing completo e bem estruturado
-    thread_parts = []
-    if pendencias:
-        thread_parts.append("*🔥 Active Action Items*\n" + _to_mrkdwn(pendencias))
-    if contexto:
-        thread_parts.append("*📚 Historical Context*\n" + _to_mrkdwn(contexto))
-    thread_text = "\n\n---\n\n".join(thread_parts) if thread_parts else briefing
-
-    return main_blocks, thread_text
-
-
-def send_slack_dm(message: str, meeting_title: str = "") -> bool:
-    """Envia DM para o utilizador via Slack SDK. Usa Block Kit e thread para melhor legibilidade."""
-    import ssl
-    from slack_sdk import WebClient
-    from slack_sdk.errors import SlackApiError
-
-    token = get_env("SLACK_BOT_TOKEN", "")
-    if not token:
-        print("SLACK_BOT_TOKEN não definido, ignorando envio Slack")
-        return False
-    client_kwargs = {"token": token}
-    if os.environ.get("SLACK_SKIP_SSL_VERIFY") == "1" or os.environ.get("GOOGLE_SKIP_SSL_VERIFY") == "1":
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        client_kwargs["ssl"] = ctx
-    client = WebClient(**client_kwargs)
-    # user_id = destinatário da DM. Para Bot tokens, auth_test retorna o BOT (não o humano).
-    # Usar SLACK_DM_USER_ID ou SLACK_USER_ID (U01DHE5U6MA).
-    user_id = os.environ.get("SLACK_DM_USER_ID") or SLACK_USER_ID
-    if not user_id:
-        print("SLACK_DM_USER_ID ou SLACK_USER_ID não definido. Definir em meeting-prepper-secrets.env")
-        return False
     try:
-        resp = client.conversations_open(users=[user_id])
-        channel = resp["channel"]["id"]
-        blocks, thread_text = _briefing_to_slack(message, meeting_title or "Reunião")
-        intro_text = f"Here is your briefing for the meeting {meeting_title or 'Reunião'}"
-        msg_resp = client.chat_postMessage(
-            channel=channel,
-            text=intro_text,
-            blocks=blocks,
-        )
-        ts = msg_resp.get("ts")
-        if ts and thread_text:
-            client.chat_postMessage(channel=channel, thread_ts=ts, text=thread_text)
-        return True
-    except SlackApiError as e:
-        print(f"Slack error: {e.response['error']}")
-        return False
-
-
-def main():
-    meeting = None
-    is_test = os.environ.get("MEETING_PREPPER_TEST") == "1"
-    if is_test and os.environ.get("MEETING_PREPPER_TEST_TITLE"):
-        title = os.environ["MEETING_PREPPER_TEST_TITLE"]
-        participants = os.environ.get("MEETING_PREPPER_TEST_PARTICIPANTS", "").split(",")
-        participants = [p.strip() for p in participants if p.strip()] or ["(not specified)"]
-        description = os.environ.get("MEETING_PREPPER_TEST_DESCRIPTION", "")
-        meeting = {"uid": f"test-{title}", "title": title, "participants": participants, "description": description}
-        print(f"Meeting Prepper: modo TESTE com reunião '{title}'")
-    else:
-        print("Meeting Prepper: verificando agenda...")
-        meeting = fetch_next_meeting()
-        if not meeting:
-            print("Nenhuma reunião nos próximos 30 minutos.")
-            return 0
-        uid = meeting["uid"]
-        if is_processed(uid):
-            print(f"Reunião já processada, pulando: {meeting['title']}")
-            return 0
-        print(f"Reunião encontrada: {meeting['title']}")
-
-    uid = meeting["uid"]
-    try:
-        briefing = generate_briefing(meeting)
+        briefing = generate_briefing(meeting, emails)
     except Exception as e:
-        print(f"Erro ao gerar briefing: {e}")
+        print(f"Error generating briefing: {e}")
         return 1
 
     if not briefing:
-        print("Briefing vazio, não enviando")
+        print("Empty briefing")
         return 1
 
-    if send_slack_dm(briefing, meeting.get("title", "")):
-        if not is_test:
-            mark_processed(uid)
-        print("Briefing enviado por Slack.")
-    else:
-        print("Falha ao enviar Slack, não marcando como processado")
-        return 1
+    print("\n" + "="*60)
+    print(briefing)
+    print("="*60)
 
     return 0
 
 
 if __name__ == "__main__":
-    exit(main())
+    import sys
+
+    # Arguments: meeting_title [participant1,participant2,...] [description]
+    meeting_title = sys.argv[1] if len(sys.argv) > 1 else ""
+    participants = []
+    description = ""
+
+    if len(sys.argv) > 2:
+        participants = [p.strip() for p in sys.argv[2].split(",") if p.strip()]
+
+    if len(sys.argv) > 3:
+        description = sys.argv[3]
+
+    exit(main(meeting_title, participants, description))
