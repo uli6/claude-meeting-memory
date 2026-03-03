@@ -768,7 +768,7 @@ EOF
 
     # Test the configuration
     sleep 1
-    if himalaya --account default envelope list &>/dev/null; then
+    if himalaya envelope list &>/dev/null; then
         print_success "Himalaya configured successfully!"
         export HIMALAYA_CONFIGURED=true
         echo ""
@@ -776,7 +776,7 @@ EOF
     else
         print_warning "Himalaya validation didn't complete. Configuration may need adjustment."
         print_warning "Config file created at: $himalaya_config"
-        print_warning "You can test later with: himalaya --account default envelope list"
+        print_warning "You can test later with: himalaya envelope list"
         print_warning "Or view logs with: himalaya --debug envelope list"
         export HIMALAYA_CONFIGURED=true
         return 0
