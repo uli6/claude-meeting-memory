@@ -145,6 +145,7 @@ See [SETUP_GUIDE.md](./SETUP_GUIDE.md#security-disclosure) for detailed security
 **Getting Started:**
 - **[QUICK_START.md](./QUICK_START.md)** - 5-minute setup and first usage
 - **[SETUP_GUIDE.md](./SETUP_GUIDE.md)** - Complete setup walkthrough with 9 phases
+- **[SETUP_FLOW_GUIDE.md](./SETUP_FLOW_GUIDE.md)** - User experience walkthrough: what happens at each setup phase, timeline, and expectations
 
 **Using the Skills:**
 - **[HOW_TO_USE.md](./docs/HOW_TO_USE.md)** - Complete guide to all three skills with examples
