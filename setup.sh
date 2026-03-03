@@ -28,6 +28,15 @@ BLUE='\033[0;34m'
 BOLD='\033[1m'
 NC='\033[0m' # No Color
 
+################################################################################
+# Source Helper Functions
+################################################################################
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$SCRIPT_DIR/setup_helpers.sh" ]]; then
+    source "$SCRIPT_DIR/setup_helpers.sh"
+fi
+
 # Configuration
 REPO_URL="https://github.com/uli6/claude-meeting-memory"
 REPO_RAW="https://raw.githubusercontent.com/uli6/claude-meeting-memory/main"
@@ -305,7 +314,7 @@ setup_calendar_watcher_cron() {
 ################################################################################
 
 phase_1_checks() {
-    print_header "Phase 1: Initial Checks & Welcome"
+    show_phase_header 1 9 "System Requirements Check" "~1 minute"
     echo ""
     echo "Checking system requirements..."
     echo ""
@@ -467,7 +476,7 @@ phase_1_5_python_deps() {
 ################################################################################
 
 phase_2_directories() {
-    print_header "Phase 2: Creating Directory Structure"
+    show_phase_header 2 9 "Creating Directory Structure" "~1 minute"
     echo ""
 
     # Create main directories
@@ -508,7 +517,7 @@ phase_2_directories() {
 ################################################################################
 
 phase_3_himalaya() {
-    print_header "Phase 3: Himalaya Email Configuration"
+    show_phase_header 3 9 "Email Configuration (REQUIRED)" "~3-5 minutes"
     echo ""
 
     print_info "Himalaya allows you to access your emails via IMAP"
@@ -667,7 +676,7 @@ phase_3_himalaya() {
 ################################################################################
 
 phase_3_5_plann() {
-    print_header "Phase 3.5: Plann Calendar Configuration (Optional)"
+    show_phase_header 4 9 "Calendar Configuration (REQUIRED)" "~3-5 minutes"
     echo ""
 
     print_info "Plann allows you to access your calendar via CalDAV"
@@ -811,7 +820,7 @@ phase_3_5_plann() {
 ################################################################################
 
 phase_4_slack() {
-    print_header "Phase 4: Slack Configuration (Optional)"
+    show_phase_header 5 9 "Slack Integration (RECOMMENDED)" "~5-7 minutes"
     echo ""
 
     print_info "Slack integration enables automatic meeting briefings via DM"
@@ -1057,7 +1066,7 @@ phase_4_slack() {
 ################################################################################
 
 phase_5_security() {
-    print_header "Phase 5: Security Review"
+    show_phase_header 6 9 "Security & Privacy" "~1 minute"
     echo ""
 
     cat << 'SECURITY_INFO'
@@ -1117,7 +1126,7 @@ SECURITY_INFO
 ################################################################################
 
 phase_6_skills() {
-    print_header "Phase 6: Registering Skills"
+    show_phase_header 7 9 "Registering Skills" "~2 minutes"
     echo ""
 
     print_info "Registering three skills:"
@@ -1197,7 +1206,7 @@ MERGE_SKILLS
 ################################################################################
 
 phase_7_templates() {
-    print_header "Phase 7: Creating Template Memory Files"
+    show_phase_header 8 9 "Creating Memory Templates" "~1 minute"
     echo ""
 
     # Ensure directories exist (critical safety check)
@@ -1312,7 +1321,7 @@ TEMPLATE_PERFIL
 ################################################################################
 
 phase_7_5_profile_setup() {
-    print_header "Phase 7.5: User Profile Setup"
+    show_phase_header 8 9 "Your Profile (Optional)" "~3 minutes"
     echo ""
 
     print_info "Your profile helps generate better meeting briefings."
@@ -1402,7 +1411,7 @@ PROFILE_TEMPLATE
 ################################################################################
 
 phase_8_validation() {
-    print_header "Phase 8: Validation"
+    show_phase_header 9 9 "Validating Setup" "~1 minute"
     echo ""
 
     local validation_passed=true
@@ -1485,7 +1494,7 @@ phase_8_validation() {
 ################################################################################
 
 phase_9_summary() {
-    print_header "Setup Completed Successfully!"
+    show_phase_header 10 9 "Completion Summary" "Done!"
     echo ""
 
     cat << 'SUMMARY_INFO'
