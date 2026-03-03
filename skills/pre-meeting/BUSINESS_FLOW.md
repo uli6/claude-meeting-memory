@@ -117,7 +117,7 @@ Used when the user explicitly asks for a briefing (e.g., "meeting briefing", "me
 
 ### 4.3 Reading files (mandatory)
 
-In Claude Code, paths are in `~/.claude/memory/` (synchronized from Notion via `sync-notion-memory.sh`):
+In Claude Code, paths are in `~/.claude/memory/`:
 
 | File | Purpose |
 |------|---------|
@@ -150,7 +150,7 @@ In Claude Code, paths are in `~/.claude/memory/` (synchronized from Notion via `
 | Executive state, decisions, next steps | `~/.claude/memory/MEMORY.md` / `workspace/MEMORY.md` |
 | Processed meetings (automatic flow only) | `workspace/memory/.processed_meetings.txt` |
 | Meetings (automatic flow only) | Google Calendar API (next 30 min) |
-| **Primary source** | Notion [Clawdia Memory](https://www.notion.so/Clawdia-Memory-312d9a25aaca80689a81cbe3376ab260) — sync via `~/.claude/scripts/sync-notion-memory.sh` |
+| **Primary source** | Local memory files in `~/.claude/memory/` |
 
 ---
 

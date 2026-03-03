@@ -74,16 +74,14 @@ Create a concise summary (3–8 paragraphs) that captures:
 
 ### 5. Confirm to user
 
-Inform that the content was read and the summary was added to daily memory. Mention that they can sync with Notion with `~/.claude/scripts/sync-notion-memory.sh` if they want.
+Inform that the content was read and the summary was added to daily memory.
 
 ## Paths
 
 | Resource | Path |
 |----------|------|
 | Google Docs Wrapper | `~/.claude/scripts/read_google_doc_wrapper.sh` |
-| Secrets (1Password) | `~/.claude/scripts/meeting-prepper-secrets.env` |
 | Daily memory | `~/.claude/memory/memoria_agente/memory_YYYY-MM-DD.md.md` |
-| Sync Notion | `~/.claude/scripts/sync-notion-memory.sh` |
 
 ## Notes
 
