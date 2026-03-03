@@ -859,8 +859,6 @@ TEMPLATE_MEM
 
 Informações sobre você para contexto de reuniões e tarefas.
 
-**Preencha uma vez e mantenha atualizado.**
-
 ---
 
 ## 👤 Informações Pessoais
@@ -877,48 +875,7 @@ Informações sobre você para contexto de reuniões e tarefas.
 
 ---
 
-## 🏢 Organização
-
-**Empresa:** [Nome da empresa]
-
-**Gerente Direto:** [Nome do seu gerente]
-
----
-
-## 👥 Time Direto
-
-**Tamanho do Time:** [Número de pessoas]
-
-**Membros:**
-- [Nome] - [Cargo]
-- [Nome] - [Cargo]
-
----
-
-## 🎯 Responsabilidades Principais
-
-1. **Responsabilidade 1** - [Descrição]
-2. **Responsabilidade 2** - [Descrição]
-
----
-
-## 📅 Reuniões Recorrentes
-
-| Reunião | Quando | Participantes |
-|---------|--------|---------------|
-| Standup | Seg-Sex 9:30am | Time |
-| 1:1 com Gerente | [Dia/Hora] | Você + Gerente |
-
----
-
-## 🚀 Objetivos Atuais
-
-1. **Objetivo 1** - [Descrição]
-2. **Objetivo 2** - [Descrição]
-
----
-
-**Preencha completamente para melhores resultados nas reuniões!**
+**Última atualização:** [Data]
 TEMPLATE_PERFIL
     then
         print_error "Failed to create perfil_usuario.md"
@@ -1007,48 +964,6 @@ Informações sobre você para contexto de reuniões e tarefas.
 **Slack Handle:** ${slack_handle:-@seu.username}
 
 ---
-
-## 🏢 Organização
-
-**Empresa:** [Nome da empresa]
-
-**Gerente Direto:** [Nome do seu gerente]
-
----
-
-## 👥 Time Direto
-
-**Tamanho do Time:** [Número de pessoas]
-
-**Membros:**
-- [Nome] - [Cargo]
-- [Nome] - [Cargo]
-
----
-
-## 🎯 Responsabilidades Principais
-
-1. **Responsabilidade 1** - [Descrição]
-2. **Responsabilidade 2** - [Descrição]
-3. **Responsabilidade 3** - [Descrição]
-
----
-
-## 📊 KPIs / Métricas Importantes
-
-- **Métrica 1:** [Descrição e alvo]
-- **Métrica 2:** [Descrição e alvo]
-
----
-
-## 🚀 Objetivos Atuais
-
-1. **Objetivo 1** - [Descrição]
-2. **Objetivo 2** - [Descrição]
-
----
-
-**Preencha completamente para melhores resultados nas reuniões!**
 
 **Última atualização:** $(date +%Y-%m-%d)
 PROFILE_TEMPLATE
