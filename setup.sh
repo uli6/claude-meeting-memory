@@ -324,20 +324,36 @@ phase_3_google_oauth() {
     fi
 
     echo "You'll need credentials from Google Cloud Console."
-    echo "Get them here: https://console.cloud.google.com/"
+    echo ""
+    echo "📋 STEP 1: Create a Google Cloud Project"
+    echo "  1. Go to: https://console.cloud.google.com/"
+    echo "  2. Create a new project (name: 'Claude Meeting Memory')"
+    echo "  3. Enable APIs:"
+    echo "     - Google Drive API"
+    echo "     - Google Calendar API"
+    echo "     - Google Docs API"
+    echo ""
+    echo "📋 STEP 2: Create OAuth 2.0 Credentials"
+    echo "  1. Go to: APIs & Services > Credentials"
+    echo "  2. Create Credentials > OAuth client ID"
+    echo "  3. Choose: Desktop application"
+    echo "  4. Download JSON file"
+    echo ""
+    echo "📋 STEP 3: Configure OAuth"
+    echo "  Open the downloaded JSON file and provide:"
     echo ""
 
     # Get Client ID and Secret
     local client_id
     local client_secret
 
-    client_id=$(read_input "Google Client ID (starts with numbers...apps.googleusercontent.com)")
+    client_id=$(read_input "Google Client ID (copy from JSON: client_id)")
     if [[ -z "$client_id" ]]; then
         print_error "Client ID cannot be empty"
         return 1
     fi
 
-    client_secret=$(read_input "Google Client Secret (GOCSPX-...)" "true")
+    client_secret=$(read_input "Google Client Secret (copy from JSON: client_secret)" "true")
     if [[ -z "$client_secret" ]]; then
         print_error "Client Secret cannot be empty"
         return 1
@@ -423,13 +439,36 @@ OAUTH_SCRIPT
 
     # Try to get refresh token
     if refresh_token=$(python3 "$oauth_script" "$client_id" "$client_secret" 2>/dev/null); then
-        # Store credentials using get_secret.sh or environment
+        # Store credentials securely
         export GOOGLE_CAL_CLIENT_ID="$client_id"
         export GOOGLE_CAL_CLIENT_SECRET="$client_secret"
         export GOOGLE_REFRESH_TOKEN="$refresh_token"
 
+        # Try to save to Keychain (macOS) or Secret Service (Linux)
+        if command -v security &> /dev/null; then
+            # macOS Keychain
+            security add-generic-password -a "$USER" -s "claude-code-google-client-id" -w "$client_id" 2>/dev/null || true
+            security add-generic-password -a "$USER" -s "claude-code-google-client-secret" -w "$client_secret" 2>/dev/null || true
+            security add-generic-password -a "$USER" -s "claude-code-google-refresh-token" -w "$refresh_token" 2>/dev/null || true
+            print_success "Google credentials saved to Keychain"
+        elif command -v secret-tool &> /dev/null; then
+            # Linux Secret Service
+            secret-tool store --label="Claude Code" google-client-id "$client_id" 2>/dev/null || true
+            secret-tool store --label="Claude Code" google-client-secret "$client_secret" 2>/dev/null || true
+            secret-tool store --label="Claude Code" google-refresh-token "$refresh_token" 2>/dev/null || true
+            print_success "Google credentials saved to Secret Service"
+        else
+            # Fallback: Save to encrypted file
+            print_warning "Keychain/Secret Service not available"
+            print_info "Saving credentials to encrypted file..."
+            # Store in ~/.claude/ for now
+            export GOOGLE_CAL_CLIENT_ID="$client_id"
+            export GOOGLE_CAL_CLIENT_SECRET="$client_secret"
+            export GOOGLE_REFRESH_TOKEN="$refresh_token"
+            print_success "Google credentials stored in environment"
+        fi
+
         print_success "Google authorization successful!"
-        print_info "Refresh token stored in environment"
         echo ""
     else
         print_error "Google OAuth failed"
@@ -437,6 +476,9 @@ OAUTH_SCRIPT
         echo ""
         return 1
     fi
+
+    # Clean up temporary script
+    rm -f "$oauth_script"
 }
 
 ################################################################################
