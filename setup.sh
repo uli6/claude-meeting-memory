@@ -489,14 +489,59 @@ phase_4_slack() {
     print_header "Phase 4: Slack Configuration"
     echo ""
 
-    print_info "Slack integration requires:"
-    echo "  • User token (xoxp-...) from your Slack app"
-    echo "  • Your Slack Member ID (U..."
+    print_info "This will authorize Claude Code to use Slack:"
+    echo "  • Read messages from channels you have access to"
+    echo "  • Send direct messages to you"
+    echo ""
+
+    # Ask if user wants to configure Slack
+    if ! ask_yes_no "Do you want to configure Slack integration?"; then
+        print_warning "Skipping Slack setup"
+        echo ""
+        return 0
+    fi
+
+    echo ""
+    echo "📋 STEP 1: Create or Use Existing Slack Workspace"
+    echo "  You need a Slack workspace where you can create apps."
+    echo ""
+    echo "  Option A - Use your company workspace:"
+    echo "    1. Open: https://app.slack.com/apps"
+    echo "    2. You're already in your workspace"
+    echo ""
+    echo "  Option B - Create personal workspace:"
+    echo "    1. Go to: https://slack.com/create"
+    echo "    2. Follow the setup steps"
+    echo ""
+    echo "  Make sure you have ADMIN access to create apps."
+    echo ""
+
+    echo "📋 STEP 2: Get Your User Token (xoxp-...)"
+    echo "  Method A - Using Legacy Token (Simplest):"
+    echo "    1. Go to: https://api.slack.com/custom-integrations/legacy-tokens"
+    echo "    2. Click 'Create New Token' for your workspace"
+    echo "    3. Copy the token (starts with xoxp-)"
+    echo ""
+    echo "  Method B - Create a Personal App (Recommended):"
+    echo "    1. Go to: https://api.slack.com/apps"
+    echo "    2. Click 'Create New App' → 'From scratch'"
+    echo "    3. Name: 'Claude Meeting Memory' | Workspace: (your workspace)"
+    echo "    4. Go to 'OAuth & Permissions' on the left"
+    echo "    5. Under 'User Token Scopes', add these scopes:"
+    echo "       • chat:write"
+    echo "       • channels:read"
+    echo "       • groups:read"
+    echo "       • im:read"
+    echo "       • users:read"
+    echo "    6. Click 'Install to Workspace' at the top"
+    echo "    7. Copy your 'User OAuth Token' (starts with xoxp-)"
+    echo ""
+    echo "⚠️  IMPORTANT: Use 'User Token' (xoxp-), NOT 'Bot Token' (xoxb-)"
     echo ""
 
     # Get Slack token
     local slack_token
-    slack_token=$(read_input "Slack User Token (xoxp-...)" "true")
+    slack_token=$(read_input "Slack User Token (copy the xoxp-... token)" "true")
 
     if [[ -z "$slack_token" ]]; then
         print_error "Slack token cannot be empty"
@@ -504,31 +549,14 @@ phase_4_slack() {
     fi
 
     if [[ ! "$slack_token" =~ ^xoxp- ]]; then
-        print_warning "Token should start with 'xoxp-' (User Token, not Bot Token)"
-    fi
-
-    # Get Slack Member ID
-    echo ""
-    echo "Get your Slack Member ID:"
-    echo "  1. Open Slack"
-    echo "  2. Click your profile (bottom-left)"
-    echo "  3. Click 'Copy user ID'"
-    echo "  4. Paste it below"
-    echo ""
-
-    local member_id
-    member_id=$(read_input "Slack Member ID (U...)")
-
-    if [[ -z "$member_id" ]]; then
-        print_error "Member ID cannot be empty"
+        print_error "Token must start with 'xoxp-' (this is a User Token, not a Bot Token)"
+        print_info "Make sure you copied the correct token from:"
+        echo "  • Legacy Tokens: https://api.slack.com/custom-integrations/legacy-tokens"
+        echo "  • OAuth & Permissions: https://api.slack.com/apps → Your App → OAuth & Permissions"
         return 1
     fi
 
-    if [[ ! "$member_id" =~ ^U ]]; then
-        print_warning "Member ID should start with 'U' (not 'C' for channels)"
-    fi
-
-    # Validate Slack token
+    # Validate token
     echo ""
     print_info "Validating Slack token..."
 
@@ -536,16 +564,70 @@ phase_4_slack() {
     slack_response=$(curl -s -X POST https://slack.com/api/auth.test \
         -H "Authorization: Bearer $slack_token" 2>/dev/null)
 
-    if echo "$slack_response" | grep -q '"ok":true'; then
-        print_success "Slack token is valid"
-        export SLACK_USER_TOKEN="$slack_token"
-        export SLACK_MEMBER_ID="$member_id"
-    else
+    if ! echo "$slack_response" | grep -q '"ok":true'; then
         print_error "Slack token validation failed"
         echo "Response: $slack_response"
+        echo ""
+        print_info "Common issues:"
+        echo "  • Token is expired (create a new one)"
+        echo "  • Token is a Bot Token, not User Token"
+        echo "  • Workspace removed the token"
         return 1
     fi
 
+    print_success "Slack token is valid"
+
+    # Get Slack Member ID
+    echo ""
+    echo "📋 STEP 3: Get Your Slack Member ID (U...)"
+    echo "  1. Open Slack in your browser or app"
+    echo "  2. Click your profile picture (usually bottom-left)"
+    echo "  3. Look for 'Member ID' or click 'Copy user ID'"
+    echo "  4. It starts with 'U' (example: U01DHE5U6MA)"
+    echo ""
+    echo "  If you don't see it:"
+    echo "    • Right-click your name in any channel"
+    echo "    • Select 'View profile'"
+    echo "    • Look for the ID starting with 'U'"
+    echo ""
+
+    local member_id
+    member_id=$(read_input "Slack Member ID (copy the U... ID)")
+
+    if [[ -z "$member_id" ]]; then
+        print_error "Member ID cannot be empty"
+        return 1
+    fi
+
+    if [[ ! "$member_id" =~ ^U ]]; then
+        print_error "Member ID must start with 'U' (not 'C' for channels or 'W' for workspaces)"
+        print_info "Make sure you're copying your USER ID, not a channel or workspace ID"
+        return 1
+    fi
+
+    # Store credentials securely
+    export SLACK_USER_TOKEN="$slack_token"
+    export SLACK_MEMBER_ID="$member_id"
+
+    # Try to save to Keychain (macOS) or Secret Service (Linux)
+    if command -v security &> /dev/null; then
+        # macOS Keychain
+        security add-generic-password -a "$USER" -s "claude-code-slack-user-token" -w "$slack_token" 2>/dev/null || true
+        security add-generic-password -a "$USER" -s "claude-code-slack-member-id" -w "$member_id" 2>/dev/null || true
+        print_success "Slack credentials saved to Keychain"
+    elif command -v secret-tool &> /dev/null; then
+        # Linux Secret Service
+        secret-tool store --label="Claude Code" slack-user-token "$slack_token" 2>/dev/null || true
+        secret-tool store --label="Claude Code" slack-member-id "$member_id" 2>/dev/null || true
+        print_success "Slack credentials saved to Secret Service"
+    else
+        # Fallback: Store in environment
+        print_warning "Keychain/Secret Service not available"
+        print_info "Slack credentials stored in environment"
+    fi
+
+    echo ""
+    print_success "Slack configuration complete!"
     echo ""
 }
 
@@ -984,12 +1066,8 @@ WELCOME
 
     echo ""
 
-    if ! ask_yes_no "Configure Slack?"; then
-        print_warning "Skipping Slack setup"
-    else
-        if ! phase_4_slack; then
-            print_warning "Slack setup failed, continuing..."
-        fi
+    if ! phase_4_slack; then
+        print_warning "Slack setup failed, continuing..."
     fi
 
     echo ""
