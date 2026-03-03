@@ -216,7 +216,14 @@ ask_yes_no() {
         echo -ne "${prompt} ${BOLD}(y/N)${NC}: "
     fi
 
-    read -r response
+    # Read from /dev/tty if available (allows input even when piped)
+    # Fall back to stdin if /dev/tty not available
+    if [[ -t 0 ]] || [[ -c /dev/tty ]]; then
+        read -r response </dev/tty || response=""
+    else
+        read -r response || response=""
+    fi
+
     response=${response:-$default}
 
     if [[ "$response" =~ ^[Yy]$ ]]; then
@@ -230,14 +237,25 @@ ask_yes_no() {
 read_input() {
     local prompt="$1"
     local mask="${2:-false}"
+    local value
 
     if [[ "$mask" == "true" ]]; then
         echo -ne "${prompt}: "
-        read -rs value
+        # Read from /dev/tty if available (allows input even when piped)
+        if [[ -t 0 ]] || [[ -c /dev/tty ]]; then
+            read -rs value </dev/tty || value=""
+        else
+            read -rs value || value=""
+        fi
         echo # New line after masked input
     else
         echo -ne "${prompt}: "
-        read -r value
+        # Read from /dev/tty if available (allows input even when piped)
+        if [[ -t 0 ]] || [[ -c /dev/tty ]]; then
+            read -r value </dev/tty || value=""
+        else
+            read -r value || value=""
+        fi
     fi
 
     echo "$value"
@@ -346,10 +364,7 @@ phase_1_checks() {
 ################################################################################
 
 phase_1_5_python_deps() {
-    print_header "Phase 1.5: Installing Python Dependencies"
-    echo ""
-
-    echo "Installing required Python packages..."
+    print_header "Phase 1.5: Python Dependencies"
     echo ""
 
     # List of required packages
@@ -362,14 +377,33 @@ phase_1_5_python_deps() {
         "slack-sdk>=3.27.0"
     )
 
+    # First, check which packages are missing
+    local missing_packages=()
+    for package in "${packages[@]}"; do
+        local pkg_name=${package%%[><=]*}
+        if ! python3 -c "import ${pkg_name//-/_}" 2>/dev/null; then
+            missing_packages+=("$package")
+        fi
+    done
+
+    if [[ ${#missing_packages[@]} -eq 0 ]]; then
+        # All packages already installed
+        print_success "All Python dependencies are already installed"
+        echo ""
+        return 0
+    fi
+
+    # Install missing packages
+    print_info "Installing ${#missing_packages[@]} missing package(s)..."
+    echo ""
+
     # Try to install using pip3
     if ! python3 -m pip install --upgrade pip >/dev/null 2>&1; then
         print_warning "Could not upgrade pip, continuing anyway..."
     fi
 
     local failed=0
-    for package in "${packages[@]}"; do
-        # Extract package name (before >=, ==, etc.)
+    for package in "${missing_packages[@]}"; do
         local pkg_name=${package%%[><=]*}
 
         if python3 -m pip install "$package" >/dev/null 2>&1; then
@@ -389,7 +423,7 @@ phase_1_5_python_deps() {
         echo "  pip3 install -r requirements.txt"
         echo ""
         echo "Or install individual packages:"
-        for package in "${packages[@]}"; do
+        for package in "${missing_packages[@]}"; do
             echo "  pip3 install '$package'"
         done
         echo ""
@@ -397,7 +431,7 @@ phase_1_5_python_deps() {
             exit 1
         fi
     else
-        print_success "All Python dependencies installed successfully!"
+        print_success "All missing dependencies installed successfully!"
     fi
 
     echo ""
@@ -1555,6 +1589,14 @@ WELCOME
     phase_1_5_python_deps
 
     phase_2_directories
+
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "CONFIGURATION PHASE"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    print_info "Now let's configure your integrations"
+    echo ""
 
     if ! ask_yes_no "Configure Google OAuth?"; then
         print_warning "Skipping Google OAuth setup"
