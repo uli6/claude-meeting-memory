@@ -448,9 +448,12 @@ phase_3_google_oauth() {
     print_header "Phase 3: Google OAuth Configuration"
     echo ""
 
-    print_info "This will authorize Claude Code to access:"
-    echo "  • Google Drive (read your Google Docs)"
-    echo "  • Google Calendar (read your events)"
+    print_info "Setting up Google Drive and Calendar access..."
+    echo ""
+    echo "This will allow Claude Code to:"
+    echo "  ✓ Read your Google Docs from Drive"
+    echo "  ✓ Check your Google Calendar for meetings"
+    echo "  ✓ Send you meeting briefings"
     echo ""
 
     # Check if credentials already exist
@@ -462,44 +465,125 @@ phase_3_google_oauth() {
         fi
     fi
 
-    echo "You'll need credentials from Google Cloud Console."
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "GETTING GOOGLE CREDENTIALS"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
-    echo "📋 STEP 1: Create a Google Cloud Project"
-    echo "  1. Go to: https://console.cloud.google.com/"
-    echo "  2. Create a new project (name: 'Claude Meeting Memory')"
-    echo "  3. Enable APIs:"
-    echo "     - Google Drive API"
-    echo "     - Google Calendar API"
-    echo "     - Google Docs API"
-    echo ""
-    echo "📋 STEP 2: Create OAuth 2.0 Credentials"
-    echo "  1. Go to: APIs & Services > Credentials"
-    echo "  2. Create Credentials > OAuth client ID"
-    echo "  3. Choose: Desktop application"
-    echo "  4. Download JSON file"
-    echo ""
-    echo "📋 STEP 3: Configure OAuth"
-    echo "  Open the downloaded JSON file and provide:"
+
+    # Step 1: Ask if they have credentials
+    if ask_yes_no "Do you have Google OAuth credentials already?"; then
+        # Skip the creation steps
+        print_info "Good! Paste your credentials below..."
+        echo ""
+    else
+        # Guide through creation
+        print_info "No problem! We'll create them together."
+        echo ""
+        echo "This takes about 5 minutes. We'll guide you through each step."
+        echo ""
+
+        if ask_yes_no "Ready to create Google credentials?"; then
+            echo ""
+            print_info "Opening Google Cloud Console in your browser..."
+            sleep 2
+
+            echo ""
+            echo "📋 STEP 1: Create a Google Cloud Project"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+            echo "  ① Go to: https://console.cloud.google.com/"
+            echo "  ② Click the project dropdown (top left)"
+            echo "  ③ Click 'NEW PROJECT'"
+            echo "  ④ Name: 'Claude Meeting Memory'"
+            echo "  ⑤ Click 'CREATE'"
+            echo "  ⑥ Wait 1-2 minutes for project to be created"
+            echo ""
+
+            if ! ask_yes_no "Project created?"; then
+                print_error "Please create the project first, then re-run setup"
+                return 1
+            fi
+
+            echo ""
+            echo "📋 STEP 2: Enable Required APIs"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+            echo "  Still in Google Cloud Console:"
+            echo "  ① Go to: APIs & Services → Library"
+            echo "  ② Search for 'Google Drive API', click it, click ENABLE"
+            echo "  ③ Go back, search for 'Google Calendar API', click it, click ENABLE"
+            echo "  ④ Go back, search for 'Google Docs API', click it, click ENABLE"
+            echo ""
+
+            if ! ask_yes_no "All three APIs enabled?"; then
+                print_error "Please enable all three APIs, then re-run setup"
+                return 1
+            fi
+
+            echo ""
+            echo "📋 STEP 3: Create OAuth Credentials"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+            echo "  ① Go to: APIs & Services → Credentials (left menu)"
+            echo "  ② Click 'Create Credentials' → 'OAuth client ID'"
+            echo "  ③ If prompted 'Configure OAuth consent screen':"
+            echo "     • Click 'Configure Consent Screen'"
+            echo "     • Choose 'External' user type"
+            echo "     • Click 'CREATE'"
+            echo "     • Fill: App name = 'Claude Code'"
+            echo "     • Fill your email as support/developer email"
+            echo "     • Click 'SAVE AND CONTINUE' (skip optional parts)"
+            echo "     • Click 'BACK TO DASHBOARD'"
+            echo "  ④ Click 'Create Credentials' → 'OAuth client ID' again"
+            echo "  ⑤ Choose 'Desktop application'"
+            echo "  ⑥ Click 'CREATE'"
+            echo ""
+
+            print_warning "Important: You should now see a popup with your credentials!"
+            echo "Copy the CLIENT ID and CLIENT SECRET from the popup"
+            echo ""
+
+            if ! ask_yes_no "Do you see the credentials popup?"; then
+                print_error "If you don't see it, click the 'DOWNLOAD JSON' button instead"
+                echo "Then open the downloaded file in a text editor to find client_id and client_secret"
+                echo ""
+            fi
+        else
+            print_error "Setup requires Google credentials. Re-run when ready."
+            return 1
+        fi
+        echo ""
+    fi
+
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "ENTERING YOUR CREDENTIALS"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
 
     # Get Client ID and Secret
     local client_id
     local client_secret
 
-    client_id=$(read_input "Google Client ID (copy from JSON: client_id)")
+    print_info "Paste your credentials from Google Cloud Console:"
+    echo ""
+
+    client_id=$(read_input "Google Client ID")
     if [[ -z "$client_id" ]]; then
         print_error "Client ID cannot be empty"
         return 1
     fi
+    print_success "Client ID received"
+    echo ""
 
-    client_secret=$(read_input "Google Client Secret (copy from JSON: client_secret)" "true")
+    client_secret=$(read_input "Google Client Secret" "true")
     if [[ -z "$client_secret" ]]; then
         print_error "Client Secret cannot be empty"
         return 1
     fi
-
+    print_success "Client Secret received"
     echo ""
-    print_info "Starting browser for authorization..."
+
+    print_info "Authorizing with Google..."
     echo ""
 
     # Create temporary Python script for OAuth
@@ -625,43 +709,103 @@ OAUTH_SCRIPT
 ################################################################################
 
 phase_4_slack() {
-    print_header "Phase 4: Slack Configuration"
+    print_header "Phase 4: Slack Configuration (Optional)"
     echo ""
 
-    print_info "This will authorize Claude Code to use Slack:"
-    echo "  • Read messages from channels you have access to"
-    echo "  • Send direct messages to you"
+    print_info "Slack integration enables automatic meeting briefings via DM"
+    echo ""
+    echo "Features with Slack:"
+    echo "  ✓ Automatic meeting briefings sent to your Slack"
+    echo "  ✓ Create action items from Slack messages"
+    echo "  ✓ Receive reminders and updates"
     echo ""
 
     # Ask if user wants to configure Slack
     if ! ask_yes_no "Do you want to configure Slack integration?"; then
-        print_warning "Skipping Slack setup"
+        print_warning "Skipping Slack setup (you can add it later)"
         echo ""
         return 0
     fi
 
     echo ""
-    echo "📋 STEP 1: Create or Use Existing Slack Workspace"
-    echo "  You need a Slack workspace where you can create apps."
-    echo ""
-    echo "  Option A - Use your company workspace:"
-    echo "    1. Open: https://app.slack.com/apps"
-    echo "    2. You're already in your workspace"
-    echo ""
-    echo "  Option B - Create personal workspace:"
-    echo "    1. Go to: https://slack.com/create"
-    echo "    2. Follow the setup steps"
-    echo ""
-    echo "  Make sure you have ADMIN access to create apps."
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "GETTING SLACK CREDENTIALS"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
 
-    echo "📋 STEP 2: Get Your User Token (xoxp-...)"
-    echo "  Method A - Using Legacy Token (Simplest):"
-    echo "    1. Go to: https://api.slack.com/custom-integrations/legacy-tokens"
-    echo "    2. Click 'Create New Token' for your workspace"
-    echo "    3. Copy the token (starts with xoxp-)"
+    print_info "We need two things from Slack:"
+    echo "  1. Your Slack User Token (xoxp-...)"
+    echo "  2. Your Slack Member ID (U...)"
     echo ""
-    echo "  Method B - Create a Personal App (Recommended):"
+
+    if ask_yes_no "Do you have a Slack User Token already?"; then
+        print_info "Good! We'll use your existing token..."
+        echo ""
+    else
+        print_info "No problem! Let's create it together."
+        echo ""
+        echo "This takes about 3 minutes. Follow these steps:"
+        echo ""
+
+        echo "📋 STEP 1: Go to Slack API"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+        echo "  ① Go to: https://api.slack.com/apps"
+        echo "  ② Click 'Create New App'"
+        echo "  ③ Choose 'From scratch'"
+        echo "  ④ App Name: 'Claude Code'"
+        echo "  ⑤ Workspace: (choose your workspace)"
+        echo "  ⑥ Click 'Create App'"
+        echo ""
+
+        if ! ask_yes_no "App created?"; then
+            print_error "Please create the Slack app first, then re-run setup"
+            return 1
+        fi
+
+        echo ""
+        echo "📋 STEP 2: Add Permissions"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+        echo "  ① Go to: OAuth & Permissions (left menu)"
+        echo "  ② Scroll to 'User Token Scopes'"
+        echo "  ③ Click 'Add an OAuth Scope'"
+        echo "  ④ Add these scopes:"
+        echo "     • channels:read"
+        echo "     • groups:read"
+        echo "     • im:read"
+        echo "     • chat:write"
+        echo "     • users:read"
+        echo ""
+
+        echo "📋 STEP 3: Install App"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+        echo "  ① Still in 'OAuth & Permissions'"
+        echo "  ② Look at the top - click 'Install to Workspace'"
+        echo "  ③ Click 'Allow' to authorize"
+        echo "  ④ You'll see a message: 'App installed to workspace'"
+        echo ""
+
+        print_warning "Important: Look for 'User OAuth Token' - it starts with 'xoxp-'"
+        echo "You should see it at the top of the OAuth & Permissions page"
+        echo ""
+
+        if ! ask_yes_no "Do you see the User OAuth Token (xoxp-...)?"; then
+            print_error "Make sure you clicked 'Install to Workspace' and authorized the app"
+            echo ""
+            return 1
+        fi
+    fi
+
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "ENTERING YOUR SLACK CREDENTIALS"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+
+    print_info "Paste your Slack credentials:"
+    echo ""
     echo "    1. Go to: https://api.slack.com/apps"
     echo "    2. Click 'Create New App' → 'From scratch'"
     echo "    3. Name: 'Claude Meeting Memory' | Workspace: (your workspace)"
@@ -680,7 +824,9 @@ phase_4_slack() {
 
     # Get Slack token
     local slack_token
-    slack_token=$(read_input "Slack User Token (copy the xoxp-... token)" "true")
+
+    print_info "Paste your Slack User Token (xoxp-...):"
+    slack_token=$(read_input "Slack User Token" "true")
 
     if [[ -z "$slack_token" ]]; then
         print_error "Slack token cannot be empty"
@@ -688,50 +834,70 @@ phase_4_slack() {
     fi
 
     if [[ ! "$slack_token" =~ ^xoxp- ]]; then
-        print_error "Token must start with 'xoxp-' (this is a User Token, not a Bot Token)"
-        print_info "Make sure you copied the correct token from:"
-        echo "  • Legacy Tokens: https://api.slack.com/custom-integrations/legacy-tokens"
-        echo "  • OAuth & Permissions: https://api.slack.com/apps → Your App → OAuth & Permissions"
+        print_error "Invalid token format!"
+        echo ""
+        echo "The token must start with 'xoxp-'"
+        echo ""
+        print_info "Make sure you copied the 'User OAuth Token', not the 'Bot Token'"
+        echo "Location: OAuth & Permissions → User OAuth Token (xoxp-...)"
+        echo ""
         return 1
     fi
 
-    # Validate token
+    print_success "Token format looks good"
     echo ""
-    print_info "Validating Slack token..."
+
+    # Validate token
+    print_info "Validating token with Slack..."
+    sleep 1
 
     local slack_response
     slack_response=$(curl -s -X POST https://slack.com/api/auth.test \
         -H "Authorization: Bearer $slack_token" 2>/dev/null)
 
     if ! echo "$slack_response" | grep -q '"ok":true'; then
-        print_error "Slack token validation failed"
-        echo "Response: $slack_response"
+        print_error "Slack rejected this token!"
         echo ""
-        print_info "Common issues:"
-        echo "  • Token is expired (create a new one)"
-        echo "  • Token is a Bot Token, not User Token"
-        echo "  • Workspace removed the token"
+        print_info "Possible reasons:"
+        echo "  • Token is expired or revoked"
+        echo "  • Token was never authorized"
+        echo "  • Token is invalid"
+        echo ""
+        print_info "Solution: Create a new token and try again"
         return 1
     fi
 
-    print_success "Slack token is valid"
+    print_success "Token is valid and working!"
+    echo ""
 
     # Get Slack Member ID
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "GETTING YOUR SLACK MEMBER ID"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
-    echo "📋 STEP 3: Get Your Slack Member ID (U...)"
-    echo "  1. Open Slack in your browser or app"
-    echo "  2. Click your profile picture (usually bottom-left)"
-    echo "  3. Look for 'Member ID' or click 'Copy user ID'"
-    echo "  4. It starts with 'U' (example: U01DHE5U6MA)"
+
+    echo "📋 How to find your Slack Member ID:"
     echo ""
-    echo "  If you don't see it:"
-    echo "    • Right-click your name in any channel"
-    echo "    • Select 'View profile'"
-    echo "    • Look for the ID starting with 'U'"
+    echo "  Method 1 (Browser):"
+    echo "    ① Go to: https://app.slack.com/"
+    echo "    ② Click your profile picture (top-right)"
+    echo "    ③ Click 'Copy user ID'"
+    echo ""
+    echo "  Method 2 (Mobile/Desktop App):"
+    echo "    ① Click your profile picture"
+    echo "    ③ Tap 'Member ID' or 'Copy user ID'"
+    echo ""
+    echo "  Your Member ID looks like: U01DHE5U6MA"
+    echo "  It ALWAYS starts with 'U'"
+    echo ""
+
+    print_warning "Make sure you copy the MEMBER ID (U...), not the CHANNEL ID (C...)"
     echo ""
 
     local member_id
-    member_id=$(read_input "Slack Member ID (copy the U... ID)")
+
+    print_info "Paste your Slack Member ID:"
+    member_id=$(read_input "Slack Member ID (U...)")
 
     if [[ -z "$member_id" ]]; then
         print_error "Member ID cannot be empty"
@@ -739,10 +905,20 @@ phase_4_slack() {
     fi
 
     if [[ ! "$member_id" =~ ^U ]]; then
-        print_error "Member ID must start with 'U' (not 'C' for channels or 'W' for workspaces)"
-        print_info "Make sure you're copying your USER ID, not a channel or workspace ID"
+        print_error "Invalid Member ID format!"
+        echo ""
+        echo "Your Member ID must start with 'U' (for example: U01DHE5U6MA)"
+        echo ""
+        print_info "You provided: $member_id"
+        echo ""
+        echo "Make sure you're copying your USER ID (starts with U)"
+        echo "NOT a Channel ID (starts with C) or Workspace ID (starts with W)"
+        echo ""
         return 1
     fi
+
+    print_success "Member ID looks good!"
+    echo ""
 
     # Store credentials securely
     export SLACK_USER_TOKEN="$slack_token"
