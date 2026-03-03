@@ -356,9 +356,80 @@ Slack Member ID (copy the U... ID): [USER PASTES]
 
 ✓ Memory system initialized
 ✓ Templates created
+```
 
-Next: Edit your profile
+---
+
+## Fase 7.5: User Profile Setup (2-3 minutos - Opcional)
+
+### O que acontece:
+- Script pergunta se usuário quer preencher o perfil agora
+- Se SIM: coleta informações básicas (nome, cargo, time, email, Slack)
+- Pre-preenche `perfil_usuario.md` com dados fornecidos
+- Se NÃO: usuário pode preencher manualmente depois com nano
+
+### Por que é importante:
+- O perfil melhora os contextos das reuniões
+- `/pre-meeting` usa estas informações
+- Melhor experiência desde o primeiro dia
+
+### O que o usuário vê:
+
+```
+════════════════════════════════════════════════════════════
+  Phase 7.5: User Profile Setup
+════════════════════════════════════════════════════════════
+
+ℹ Your profile helps generate better meeting briefings.
+You can:
+  • Fill it now (2-3 minutes)
+  • Skip and fill it later with: nano ~/.claude/memory/memoria_agente/perfil_usuario.md
+
+Do you want to fill your profile now? (Y/n): y
+
+ℹ Let's gather some basic information about you.
+
+👤 Full name (or nickname): João Silva
+💼 Your job title/role: Software Engineer
+👥 Your team/department: Platform Team
+📧 Your email (optional): joao.silva@company.com
+💬 Slack handle (e.g., @seu.username) (optional): @joao.silva
+
+ℹ Saving your profile...
+✓ Profile saved!
+
+ℹ Your profile has been created with the information you provided.
+You can edit it anytime with:
   nano ~/.claude/memory/memoria_agente/perfil_usuario.md
+```
+
+### Cenário alternativo (usuário pula):
+
+```
+Do you want to fill your profile now? (Y/n): n
+
+⚠ Skipping profile setup
+You can fill it later with:
+  nano ~/.claude/memory/memoria_agente/perfil_usuario.md
+```
+
+### Resultado:
+
+**Arquivo criado:** `~/.claude/memory/memoria_agente/perfil_usuario.md`
+
+Com conteúdo pre-preenchido:
+```markdown
+# Seu Perfil - Memória do Agente
+
+## 👤 Informações Pessoais
+**Nome Completo:** João Silva
+**Cargo/Título:** Software Engineer
+**Time/Departamento:** Platform Team
+**Email:** joao.silva@company.com
+**Slack Handle:** @joao.silva
+
+## 🏢 Organização
+[Resto do template para completar manualmente]
 ```
 
 ---
@@ -410,13 +481,13 @@ YOUR THREE SKILLS ARE READY NOW:
 
 IMMEDIATE NEXT STEPS:
 
-  1. Fill your profile:
-     nano ~/.claude/memory/memoria_agente/perfil_usuario.md
-
-  2. Test the skills:
+  1. Test the skills:
      /read-this https://docs.google.com/document/d/YOUR_DOC/edit
      /pre-meeting
      /remind-me Check the deadline
+
+  2. Update your profile (if needed):
+     nano ~/.claude/memory/memoria_agente/perfil_usuario.md
 
   3. Verify everything works:
      bash ~/.claude/scripts/validate.sh
@@ -445,9 +516,10 @@ Issues: https://github.com/uli6/claude-meeting-memory/issues
 | 5 | 1m | Revisão de segurança |
 | 6 | 30s | Registar skills |
 | 7 | 30s | Criar templates |
+| 7.5 | 2-3m | **Preencher Perfil (opcional)** |
 | 8 | 1m | Validação |
 | 9 | 1m | Resumo |
-| **TOTAL** | **~10-15m** | **Setup Completo** |
+| **TOTAL** | **~12-18m** | **Setup Completo** |
 
 ---
 
@@ -465,6 +537,11 @@ Issues: https://github.com/uli6/claude-meeting-memory/issues
 - ✓ Criar token (Legacy ou Personal App)
 - ✓ Copiar token (xoxp-...)
 - ✓ Obter Member ID (copiar de profile)
+
+### Fase 7.5 (Perfil) - Requer:
+- ✓ Clique sim/não (quer preencher perfil agora?)
+- ✓ Se SIM: Preencher nome + cargo + time + email + Slack handle
+- ✓ Se NÃO: Pode preencher depois com nano
 
 ### Outras Fases:
 - Automáticas (sem input do usuário necessário)
