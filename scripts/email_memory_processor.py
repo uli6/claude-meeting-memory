@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 ################################################################################
-# email_memory_processor.py - Email Processing with Gemini AI
+# email_memory_processor.py - Email Processing with Claude AI
 #
-# Processes emails via Gmail API and extracts information using Gemini AI
+# Processes emails via Gmail API and extracts information using Claude API
 # Saves summaries to memory system and updates action points
 #
 # Usage:
@@ -12,7 +12,7 @@
 # Requires:
 #   - google-auth-oauthlib
 #   - google-api-client
-#   - google-generativeai
+#   - anthropic
 ################################################################################
 
 import os
@@ -35,10 +35,10 @@ except ImportError:
 try:
     from google.oauth2.service_account import Credentials
     from googleapiclient.discovery import build
-    import google.generativeai as genai
+    import anthropic
 except ImportError:
     print("ERROR: Missing required libraries", file=sys.stderr)
-    print("Install: pip3 install google-auth google-api-client google-generativeai", file=sys.stderr)
+    print("Install: pip3 install google-auth google-api-client anthropic", file=sys.stderr)
     sys.exit(1)
 
 
@@ -54,7 +54,7 @@ class EmailMemoryProcessor:
 
         self.config = {}
         self.gmail_service = None
-        self.gemini_model = None
+        self.claude_client = None
 
         self.load_config()
         self.setup_clients()
@@ -71,12 +71,12 @@ class EmailMemoryProcessor:
             raise ValueError(f"Invalid JSON in config: {e}")
 
     def setup_clients(self) -> None:
-        """Initialize Gmail and Gemini clients"""
+        """Initialize Gmail and Claude clients"""
         if self.config.get("gmail", {}).get("enabled"):
             self.setup_gmail()
 
-        if self.config.get("gemini", {}).get("enabled"):
-            self.setup_gemini()
+        if self.config.get("claude", {}).get("enabled"):
+            self.setup_claude()
 
     def setup_gmail(self) -> None:
         """Setup Gmail API client"""
@@ -99,25 +99,43 @@ class EmailMemoryProcessor:
             print(f"ERROR: Gmail setup failed: {e}", file=sys.stderr)
             raise
 
-    def setup_gemini(self) -> None:
-        """Setup Gemini API client"""
+    def setup_claude(self) -> None:
+        """Setup Claude API client via Claude Code"""
         try:
-            # Try to get from Keychain first
-            api_key = get_secret("gemini-api-key")
+            # Get API key from Claude Code's auth helper
+            settings_path = Path.home() / ".claude" / "settings.json"
+            data = {}
+            if settings_path.exists():
+                data = json.loads(settings_path.read_text(encoding="utf-8"))
+                for k, v in data.get("env", {}).items():
+                    if isinstance(v, str) and k not in os.environ:
+                        os.environ[k] = v
 
-            # Fallback to environment
-            if not api_key:
-                api_key = os.getenv("GEMINI_API_KEY")
+            # Get token from apiKeyHelper
+            helper = data.get("apiKeyHelper", "~/.claude/ifood_auth.sh")
+            helper = str(Path(helper).expanduser())
+            if Path(helper).is_file():
+                import subprocess
+                api_key = subprocess.check_output(["bash", helper], timeout=30).decode().strip()
+            else:
+                raise ValueError("apiKeyHelper not found - Claude Code may not be properly configured")
 
-            if not api_key:
-                raise ValueError("Gemini API key not found in Keychain or environment")
+            # Setup client with optional custom base URL and headers
+            client_kwargs = {"api_key": api_key}
+            if os.environ.get("ANTHROPIC_BASE_URL"):
+                client_kwargs["base_url"] = os.environ["ANTHROPIC_BASE_URL"]
+                client_kwargs.setdefault("default_headers", {})["Authorization"] = f"Bearer {api_key}"
+            if os.environ.get("ANTHROPIC_CUSTOM_HEADERS"):
+                h = os.environ["ANTHROPIC_CUSTOM_HEADERS"]
+                if ":" in h:
+                    k, v = h.split(":", 1)
+                    client_kwargs.setdefault("default_headers", {})[k.strip()] = v.strip()
 
-            genai.configure(api_key=api_key)
-            model_name = self.config.get("gemini", {}).get("model", "gemini-1.5-flash")
-            self.gemini_model = genai.GenerativeModel(model_name)
-            print(f"✓ Gemini API configured ({model_name})")
+            self.claude_client = anthropic.Anthropic(**client_kwargs)
+            model_name = self.config.get("claude", {}).get("model", "claude-opus-4-6")
+            print(f"✓ Claude API configured ({model_name})")
         except Exception as e:
-            print(f"ERROR: Gemini setup failed: {e}", file=sys.stderr)
+            print(f"ERROR: Claude setup failed: {e}", file=sys.stderr)
             raise
 
     def fetch_emails(self) -> List[Dict]:
@@ -202,8 +220,8 @@ class EmailMemoryProcessor:
             print(f"ERROR: Failed to extract body: {e}", file=sys.stderr)
             return ""
 
-    def process_with_gemini(self, email_content: Dict) -> Optional[str]:
-        """Use Gemini to extract and summarize email"""
+    def process_with_claude(self, email_content: Dict) -> Optional[str]:
+        """Use Claude to extract and summarize email"""
         prompt = f"""Analyze this email and extract key information:
 
 From: {email_content['from']}
@@ -211,7 +229,7 @@ Subject: {email_content['subject']}
 Date: {email_content['date']}
 
 Content:
-{email_content['body'][:2000]}  # Limit to first 2000 chars to avoid token limit
+{email_content['body'][:2000]}
 
 Please provide a structured summary with:
 
@@ -241,10 +259,15 @@ Please provide a structured summary with:
 Keep the summary concise and well-structured for memory storage."""
 
         try:
-            response = self.gemini_model.generate_content(prompt)
-            return response.text
+            model = self.config.get("claude", {}).get("model", "claude-opus-4-6")
+            response = self.claude_client.messages.create(
+                model=model,
+                max_tokens=1024,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            return response.content[0].text
         except Exception as e:
-            print(f"ERROR: Gemini processing failed: {e}", file=sys.stderr)
+            print(f"ERROR: Claude processing failed: {e}", file=sys.stderr)
             return None
 
     def save_to_memory(self, email_content: Dict, processed_content: str) -> Optional[Path]:
@@ -543,9 +566,9 @@ Keep the summary concise and well-structured for memory storage."""
                 print(f"  From: {email_content['from'].split('<')[0].strip() if '<' in email_content['from'] else email_content['from']}")
                 print(f"  Subject: {email_content['subject'][:50]}...")
 
-                # Process with Gemini
-                print("  Processing with Gemini...")
-                processed = self.process_with_gemini(email_content)
+                # Process with Claude
+                print("  Processing with Claude...")
+                processed = self.process_with_claude(email_content)
                 if not processed:
                     continue
 

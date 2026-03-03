@@ -159,7 +159,7 @@ The setup script automatically installs Python dependencies. If you skip this ph
 pip3 install -r requirements.txt
 
 # Or install individually
-pip3 install google-auth google-auth-oauthlib google-api-client google-generativeai slack-sdk
+pip3 install google-auth google-auth-oauthlib google-api-client anthropic slack-sdk
 ```
 
 **Why it matters:** Email automation and credential management require these packages.
@@ -200,17 +200,17 @@ source ~/claude-venv/bin/activate
 pip3 install -r requirements.txt
 ```
 
-### Email automation shows "ModuleNotFoundError: No module named 'google.generativeai'"
+### Email automation shows "ModuleNotFoundError: No module named 'anthropic'"
 
-**Problem:** Google Generative AI (Gemini) package is not installed.
+**Problem:** Anthropic package is not installed.
 
 **Solution:**
 
 ```bash
-pip3 install google-generativeai
+pip3 install anthropic
 ```
 
-This package is specifically required for email automation with Gemini AI.
+This package is specifically required for email automation with Claude AI.
 
 ## Credential Issues
 

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
 ################################################################################
-# email_memory_gemini_notes.py - Special Handler for Gemini Notes Emails
+# email_memory_gemini_notes.py - Special Handler for Specific Email Sources
 #
-# Specialized script to fetch emails from gemini-notes@google.com and
+# Specialized script to fetch emails from specific senders (like gemini-notes@google.com) and
 # automatically save them as memory notes with intelligent organization
 #
-# These are typically Google Gemini-generated notes/summaries that should be
+# These emails are treated as notes/summaries that should be
 # integrated into your memory system
 #
 # Usage:

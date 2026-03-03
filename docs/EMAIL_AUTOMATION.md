@@ -1,12 +1,12 @@
-# Email Automation with Gemini Integration
+# Email Automation with Claude Integration
 
-Complete guide to automatically collecting emails and generating memory notes via Gemini AI.
+Complete guide to automatically collecting emails and generating memory notes via Claude AI.
 
 ## Overview
 
 This automation system runs every 10 minutes to:
 1. **Check email** - Fetch new emails from your inbox
-2. **Extract with Gemini** - Use Gemini AI to intelligently extract key information
+2. **Extract with Claude** - Use Claude AI to intelligently extract key information
 3. **Generate notes** - Create structured memory notes automatically
 4. **Organize** - Save to `~/.claude/memory/memoria_agente/` by date and topic
 5. **Update action items** - Extract and add action items to `action_points.md`
@@ -24,7 +24,7 @@ Email Check (Gmail API)
     ↓
 Parse Email Content
     ↓
-Send to Gemini API
+Send to Claude API
     ↓
 Extract Key Information:
   - Topics/Projects

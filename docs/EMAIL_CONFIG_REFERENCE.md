@@ -1,6 +1,6 @@
 # Email Configuration Reference
 
-Complete reference for configuring email automation with Gemini integration.
+Complete reference for configuring email automation with Claude AI integration.
 
 ## Quick Setup (3 Steps)
 
@@ -47,30 +47,28 @@ crontab -e
 | `max_results` | number | Max emails per check | `5` to `100` |
 | `exclude_labels` | array | Labels to ignore | `["SPAM", "TRASH"]` |
 
-### Gemini Configuration
+### Claude Configuration
 
 ```json
 {
-  "gemini": {
+  "claude": {
     "enabled": true,
-    "model": "gemini-1.5-flash",
-    "temperature": 0.7,
-    "max_tokens": 1000
+    "model": "claude-opus-4-6",
+    "max_tokens": 1024
   }
 }
 ```
 
 | Option | Type | Description | Default | Options |
 |--------|------|-------------|---------|---------|
-| `enabled` | bool | Enable Gemini AI processing | `true` | `true`, `false` |
-| `model` | string | Gemini model to use | `gemini-1.5-flash` | `gemini-1.5-flash`, `gemini-1.5-pro`, `gemini-2.0-flash` |
-| `temperature` | float | Creativity level (0-1) | `0.7` | Lower = deterministic, Higher = creative |
-| `max_tokens` | number | Max response length | `1000` | `500` to `2000` |
+| `enabled` | bool | Enable Claude AI processing | `true` | `true`, `false` |
+| `model` | string | Claude model to use | `claude-opus-4-6` | `claude-opus-4-6`, `claude-sonnet-4-20250514`, `claude-3-haiku-20240307` |
+| `max_tokens` | number | Max response length | `1024` | `512` to `2000` |
 
 **Model Comparison:**
-- `gemini-1.5-flash`: Fast, cheap, good for email summaries (recommended)
-- `gemini-1.5-pro`: Slower, more expensive, better accuracy for complex emails
-- `gemini-2.0-flash`: Latest, balanced speed and quality
+- `claude-opus-4-6`: Recommended for comprehensive email analysis (smartest, slower)
+- `claude-sonnet-4-20250514`: Balanced speed and quality (recommended for most use cases)
+- `claude-3-haiku-20240307`: Fast, cheap, good for quick email summaries
 
 ### Filtering Configuration
 
@@ -281,9 +279,9 @@ memoria_agente/
     "max_age_days": 7,
     "min_content_length": 50
   },
-  "gemini": {
-    "temperature": 0.5,
-    "max_tokens": 2000
+  "claude": {
+    "model": "claude-opus-4-6",
+    "max_tokens": 1500
   },
   "automation": {
     "cron_interval": "*/10 * * * *",
@@ -292,7 +290,7 @@ memoria_agente/
 }
 ```
 
-### Scenario 3: Gemini Notes Only
+### Scenario 3: Notes Processing Only
 
 ```json
 {
@@ -303,7 +301,7 @@ memoria_agente/
     "extract_dates": true
   },
   "memory": {
-    "save_location": "~/.claude/memory/memoria_agente/gemini_notes",
+    "save_location": "~/.claude/memory/memoria_agente/notes",
     "update_action_points": true
   },
   "filtering": {
@@ -345,9 +343,9 @@ memoria_agente/
     "timeout_seconds": 180,
     "cron_interval": "*/30 * * * *"
   },
-  "gemini": {
-    "model": "gemini-1.5-flash",
-    "max_tokens": 500
+  "claude": {
+    "model": "claude-3-haiku-20240307",
+    "max_tokens": 512
   }
 }
 ```
@@ -403,10 +401,9 @@ If no configuration file exists, these defaults are used:
     "labels_to_check": ["INBOX"],
     "max_results": 5
   },
-  "gemini": {
+  "claude": {
     "enabled": true,
-    "model": "gemini-1.5-flash",
-    "temperature": 0.7
+    "model": "claude-opus-4-6"
   },
   "filtering": {
     "max_age_days": 1,
