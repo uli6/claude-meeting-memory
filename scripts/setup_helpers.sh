@@ -74,39 +74,75 @@ show_phase_header() {
 # Help System
 ################################################################################
 
-# Initialize help text dictionary
-declare -A HELP_TEXTS=(
-    ["IMAP"]="A protocol to access your emails from anywhere (like how you check email on your phone)"
-    ["CalDAV"]="A standard way to access your calendar from multiple devices and services"
-    ["App Password"]="A special password just for this app - safer than using your real password"
-    ["OAuth Token"]="A secure code that lets Claude Memory access your account without needing your password"
-    ["User Token"]="A Slack token for your personal account (starts with xoxp-)"
-    ["Bot Token"]="A Slack token for a bot/app (starts with xoxb-) - NOT what we need"
-    ["Member ID"]="Your unique ID in Slack (looks like U01DHE5U6MA)"
-    ["Nextcloud"]="A personal cloud storage service you can host yourself"
-    ["Radicale"]="A lightweight calendar/contact server you can host yourself"
-    ["FastMail"]="An email service that also provides calendar storage"
-    ["ProtonMail"]="An encrypted email service focused on privacy"
-    ["Himalaya"]="A command-line email client that reads your emails"
-    ["Plann"]="A command-line calendar client that reads your calendar events"
-    ["CalDAV"]="A calendar sharing standard - lets apps sync with your calendar"
-)
+# Get help text for a term
+# Usage: get_help_text "IMAP"
+get_help_text() {
+    local term="$1"
+    case "$term" in
+        "IMAP")
+            echo "A protocol to access your emails from anywhere (like how you check email on your phone)"
+            ;;
+        "CalDAV")
+            echo "A standard way to access your calendar from multiple devices and services"
+            ;;
+        "App Password")
+            echo "A special password just for this app - safer than using your real password"
+            ;;
+        "OAuth Token")
+            echo "A secure code that lets Claude Memory access your account without needing your password"
+            ;;
+        "User Token")
+            echo "A Slack token for your personal account (starts with xoxp-)"
+            ;;
+        "Bot Token")
+            echo "A Slack token for a bot/app (starts with xoxb-) - NOT what we need"
+            ;;
+        "Member ID")
+            echo "Your unique ID in Slack (looks like U01DHE5U6MA)"
+            ;;
+        "Nextcloud")
+            echo "A personal cloud storage service you can host yourself"
+            ;;
+        "Radicale")
+            echo "A lightweight calendar/contact server you can host yourself"
+            ;;
+        "FastMail")
+            echo "An email service that also provides calendar storage"
+            ;;
+        "ProtonMail")
+            echo "An encrypted email service focused on privacy"
+            ;;
+        "Himalaya")
+            echo "A command-line email client that reads your emails"
+            ;;
+        "Plann")
+            echo "A command-line calendar client that reads your calendar events"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+    return 0
+}
 
 # Show help for a term
 # Usage: show_help "IMAP"
 show_help() {
     local term="$1"
+    local help_text
 
     if [[ -z "$term" ]]; then
-        echo "Available terms:"
-        for key in "${!HELP_TEXTS[@]}"; do
-            echo "  • $key"
-        done
+        echo "Available help topics:"
+        echo "  IMAP, CalDAV, App Password, OAuth Token"
+        echo "  User Token, Bot Token, Member ID"
+        echo "  Nextcloud, Radicale, FastMail, ProtonMail"
+        echo "  Himalaya, Plann"
         return 0
     fi
 
-    if [[ -n "${HELP_TEXTS[$term]}" ]]; then
-        echo -e "${BLUE}ℹ${NC}  ${HELP_TEXTS[$term]}"
+    help_text=$(get_help_text "$term" 2>/dev/null)
+    if [[ $? -eq 0 ]]; then
+        echo -e "${BLUE}ℹ${NC}  $help_text"
     else
         echo -e "${YELLOW}⚠${NC}  No help available for: $term"
     fi

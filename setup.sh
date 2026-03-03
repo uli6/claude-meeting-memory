@@ -32,9 +32,103 @@ NC='\033[0m' # No Color
 # Source Helper Functions
 ################################################################################
 
+# Find the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [[ -f "$SCRIPT_DIR/setup_helpers.sh" ]]; then
-    source "$SCRIPT_DIR/setup_helpers.sh"
+
+# Source helper functions if available
+if [[ -f "$SCRIPT_DIR/scripts/setup_helpers.sh" ]]; then
+    source "$SCRIPT_DIR/scripts/setup_helpers.sh"
+elif [[ -f "$(dirname "$0")/scripts/setup_helpers.sh" ]]; then
+    source "$(dirname "$0")/scripts/setup_helpers.sh"
+fi
+
+# Fallback functions if helpers not loaded
+if ! declare -f show_phase_header > /dev/null; then
+    show_phase_header() {
+        # Simple fallback if helpers aren't available
+        echo ""
+        echo -e "${BOLD}${BLUE}Phase $1 of $2: $3${NC}"
+        if [[ -n "$4" ]]; then
+            echo -e "${BLUE}Time: $4${NC}"
+        fi
+        echo ""
+    }
+fi
+
+if ! declare -f show_help_prompt > /dev/null; then
+    show_help_prompt() {
+        # Silently skip if helpers not available
+        return 0
+    }
+fi
+
+if ! declare -f show_email_providers > /dev/null; then
+    show_email_providers() {
+        echo "What email provider do you use?"
+        echo "  1) Gmail"
+        echo "  2) ProtonMail"
+        echo "  3) Fastmail"
+        echo "  4) Outlook/Microsoft"
+        echo "  5) Other email service"
+        echo ""
+    }
+fi
+
+if ! declare -f show_calendar_providers > /dev/null; then
+    show_calendar_providers() {
+        echo "What calendar service do you use?"
+        echo "  1) Nextcloud (personal cloud)"
+        echo "  2) Radicale (self-hosted calendar)"
+        echo "  3) FastMail (email with calendar)"
+        echo "  4) Other CalDAV service"
+        echo ""
+    }
+fi
+
+if ! declare -f show_step_guide > /dev/null; then
+    show_step_guide() {
+        local title="$1"
+        shift
+        echo ""
+        echo "$title"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        while [[ $# -gt 0 ]]; do
+            echo "  $1"
+            shift
+        done
+        echo ""
+    }
+fi
+
+if ! declare -f show_section > /dev/null; then
+    show_section() {
+        echo ""
+        echo -e "${BOLD}${BLUE}$1${NC}"
+        echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo ""
+    }
+fi
+
+if ! declare -f show_security_summary > /dev/null; then
+    show_security_summary() {
+        echo "Your credentials are stored securely on your machine:"
+        echo ""
+        echo "✓ On your machine only"
+        echo "✓ Protected by OS keychain/secret service"
+        echo "✓ Never sent to cloud or external services"
+        echo ""
+    }
+fi
+
+if ! declare -f show_requirement_summary > /dev/null; then
+    show_requirement_summary() {
+        echo "What's Required vs Optional:"
+        echo ""
+        echo "✓ REQUIRED: Email + Calendar"
+        echo "◆ RECOMMENDED: Slack integration"
+        echo "◇ OPTIONAL: Profile customization"
+        echo ""
+    }
 fi
 
 # Configuration
