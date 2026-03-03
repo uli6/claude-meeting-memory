@@ -1,13 +1,13 @@
 # Getting Started with Email Automation
 
-Learn how to automatically process emails with Gemini and save them to your memory system.
+Learn how to automatically process emails with Claude AI (via Claude Code) and save them to your memory system.
 
 ## 🎯 What You'll Get
 
 After setup, you'll have:
 
 - ✅ Automatic email collection every 10 minutes
-- ✅ Gemini AI processing for intelligent summaries
+- ✅ Claude AI processing (via Claude Code) for intelligent summaries
 - ✅ Structured notes saved to your memory system
 - ✅ Action items automatically extracted
 - ✅ Organized by date and topic
@@ -50,15 +50,23 @@ mkdir -p ~/.claude/secrets
 cp ~/Downloads/YOUR-KEY-FILE.json ~/.claude/secrets/gmail-service-account.json
 ```
 
-### Step 2: Get Gemini API Key (3 minutes)
+### Step 2: Verify Claude Code Setup (1 minute)
 
 ```bash
-# 1. Visit: https://makersuite.google.com/app/apikey
-# 2. Click "Create API Key"
-# 3. Copy the key
-# 4. Store in Keychain (macOS) or Secret Service (Linux)
-#    Run: security add-generic-password -a $USER -s "claude-code-gemini-api-key" -w "YOUR-KEY"
-#    Or: secret-tool store --label="Claude Code" gemini-api-key "YOUR-KEY"
+# Claude API is already integrated via Claude Code
+# Just verify your setup is working:
+
+# 1. Check Claude Code is installed
+ls -la ~/.claude/
+
+# 2. Check API helper exists
+ls -la ~/.claude/ifood_auth.sh
+
+# 3. Test it works
+bash ~/.claude/ifood_auth.sh
+# Should return your API token without error
+
+# No extra API key setup needed! 🎉
 ```
 
 ### Step 3: Configure Email Automation (5 minutes)
@@ -121,7 +129,7 @@ crontab -l
 **What this does:**
 - Runs every 10 minutes
 - Checks for new emails from Gmail
-- Processes with Gemini AI
+- Processes with Claude AI (via Claude Code)
 - Saves results to your memory
 - Logs all activity
 
@@ -142,9 +150,9 @@ For most users, these defaults work fine:
     "labels_to_check": ["INBOX"],
     "max_results": 10
   },
-  "gemini": {
+  "claude": {
     "enabled": true,
-    "model": "gemini-1.5-flash"
+    "model": "claude-opus-4-6"
   },
   "filtering": {
     "max_age_days": 1,
@@ -184,7 +192,7 @@ For complete options and scenarios, see [EMAIL_CONFIG_REFERENCE.md](EMAIL_CONFIG
 
 5. **Use more accurate AI model:**
    ```json
-   "model": "gemini-1.5-pro"
+   "model": "claude-sonnet-4-20250514"
    ```
 
 ---
@@ -199,7 +207,7 @@ Emails are saved as organized markdown files:
 ~/.claude/memory/memoria_agente/
 ├── 2026-03-02_from_john@company.com.md
 ├── 2026-03-02_email_summary.md
-├── gemini_notes/
+├── notes/
 │   ├── 2026-03-02_meeting_notes.md
 │   └── 2026-03-02_project_updates.md
 └── 2026-03-03_from_maria@company.com.md
@@ -362,14 +370,16 @@ print(f"Found {len(results.get('messages', []))} unread emails in last day")
 EOF
 ```
 
-### Issue: "Gemini setup failed"
+### Issue: "Claude API setup failed"
 
-**Solution:** Check Gemini API key:
+**Solution:** Check Claude Code authentication:
 ```bash
-# Check if key is stored
-security find-generic-password -a $USER -s "claude-code-gemini-api-key" -w
-# or
-secret-tool lookup --label="Claude Code" gemini-api-key
+# Verify Claude Code is installed
+ls -la ~/.claude/
+
+# Test API helper
+bash ~/.claude/ifood_auth.sh
+# Should return your API token without error
 ```
 
 ### Issue: Action items not being extracted
@@ -380,7 +390,7 @@ secret-tool lookup --label="Claude Code" gemini-api-key
   "memory": {
     "update_action_points": true
   },
-  "gemini_notes": {
+  "notes_processing": {
     "extract_action_items": true
   }
 }
@@ -397,8 +407,8 @@ secret-tool lookup --label="Claude Code" gemini-api-key
   "automation": {
     "timeout_seconds": 180
   },
-  "gemini": {
-    "model": "gemini-1.5-flash",
+  "claude": {
+    "model": "claude-opus-4-6",
     "max_tokens": 500
   }
 }
@@ -421,7 +431,7 @@ Before automation starts, verify:
 
 - [ ] Gmail API enabled in Google Cloud Console
 - [ ] Service account JSON downloaded and saved
-- [ ] Gemini API key created and stored in Keychain
+- [ ] Claude Code API helper verified working
 - [ ] `~/.claude/config/email_config.json` created and configured
 - [ ] `python3 ~/.claude/scripts/email_memory_processor.py` runs successfully
 - [ ] Memory files created in `~/.claude/memory/memoria_agente/`
