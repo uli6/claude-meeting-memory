@@ -348,7 +348,8 @@ read_input() {
         fi
     fi
 
-    echo "$value"
+    # Trim whitespace and return
+    echo "${value}" | xargs
 }
 
 # Download file from GitHub
@@ -774,11 +775,32 @@ phase_3_5_plann() {
             print_info "Installing Plann via pip3..."
             echo ""
 
-            if python3 -m pip install plann >/dev/null 2>&1; then
+            # Try multiple installation methods
+            local installed=false
+
+            # Method 1: pip3 (preferred)
+            if pip3 install plann >/dev/null 2>&1; then
                 print_success "Plann installed successfully"
-            else
-                print_error "Failed to install Plann via pip. Install manually with: pip3 install plann"
-                return 1
+                installed=true
+            # Method 2: python3 -m pip
+            elif python3 -m pip install plann >/dev/null 2>&1; then
+                print_success "Plann installed successfully"
+                installed=true
+            fi
+
+            if [[ "$installed" == "false" ]]; then
+                print_error "Failed to install Plann via pip"
+                echo ""
+                echo "Try installing manually:"
+                echo "  pip3 install plann"
+                echo "  or"
+                echo "  python3 -m pip install plann"
+                echo ""
+                if ask_yes_no "Continue setup anyway?"; then
+                    echo ""
+                else
+                    return 1
+                fi
             fi
         else
             print_warning "Skipping Plann setup"
