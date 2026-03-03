@@ -301,19 +301,15 @@ ask_yes_no() {
     local response
 
     if [[ "$default" == "y" ]]; then
-        echo -ne "${prompt} ${BOLD}(Y/n)${NC}: "
+        echo -ne "${prompt} ${BOLD}(Y/n)${NC}: " >&2
     else
-        echo -ne "${prompt} ${BOLD}(y/N)${NC}: "
+        echo -ne "${prompt} ${BOLD}(y/N)${NC}: " >&2
     fi
 
-    # Read from /dev/tty if available (allows input even when piped)
-    # Fall back to stdin if /dev/tty not available
-    if [[ -t 0 ]] || [[ -c /dev/tty ]]; then
-        read -r response </dev/tty || response=""
-    else
-        read -r response || response=""
-    fi
+    # Read from stdin (works with both piped and interactive input)
+    read -r response 2>/dev/null || response=""
 
+    # Use default if empty
     response=${response:-$default}
 
     if [[ "$response" =~ ^[Yy]$ ]]; then
@@ -332,21 +328,18 @@ read_input() {
     # Always show prompt to user on stderr
     if [[ "$mask" == "true" ]]; then
         echo -ne "${prompt}: " >&2
-        # Try to read from /dev/tty if available (handles piped input)
-        if [[ -t 0 ]]; then
-            read -rs value
+        # Try to read from stdin (works with piped and interactive input)
+        if read -rs value 2>/dev/null; then
+            :
         else
-            read -rs value </dev/tty 2>/dev/null || read -rs value
+            # Fallback: read without -s flag
+            read -r value 2>/dev/null || value=""
         fi
         echo >&2
     else
         echo -ne "${prompt}: " >&2
-        # Try to read from /dev/tty if available (handles piped input)
-        if [[ -t 0 ]]; then
-            read -r value
-        else
-            read -r value </dev/tty 2>/dev/null || read -r value
-        fi
+        # Read from stdin (works with both piped and interactive input)
+        read -r value 2>/dev/null || value=""
     fi
 
     # Trim whitespace
