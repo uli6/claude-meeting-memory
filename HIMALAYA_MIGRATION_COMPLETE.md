@@ -22,15 +22,22 @@ Successfully migrated the Claude Meeting Memory system from Google OAuth/Calenda
 
 **Changes:**
 - ❌ Removed `phase_3_google_oauth()` function (entire Google OAuth flow, ~260 lines)
-- ✅ Added `phase_3_himalaya()` function (~80 lines)
+- ✅ Added `phase_3_himalaya()` function (~160 lines - comprehensive guided setup)
   - Checks if Himalaya CLI installed
   - Offers automatic installation (brew/apt/cargo)
-  - Runs interactive `himalaya account configure`
+  - **NEW**: Step-by-step provider selection (Gmail, ProtonMail, Fastmail, Outlook, other IMAP)
+  - **NEW**: Provider-specific instructions (App Password URLs, security settings, etc.)
+  - **NEW**: Guided input for email address and password
+  - Runs Himalaya's interactive `account configure` with context
   - Validates with `himalaya envelope list`
-- ✅ Added `phase_3_5_plann()` function (~80 lines)
+- ✅ Added `phase_3_5_plann()` function (~140 lines - comprehensive guided setup)
+  - **NEW**: Optional calendar setup (users can use email alone)
   - Checks if Plann CLI installed
   - Offers pip3 installation
-  - Runs interactive `plann account configure`
+  - **NEW**: Step-by-step CalDAV provider selection (Nextcloud, Radicale, FastMail, other)
+  - **NEW**: Provider-specific setup instructions
+  - **NEW**: Guided input for CalDAV credentials
+  - Runs Plann's interactive `account configure` with context
   - Validates with `plann calendar list`
 - ❌ Removed `phase_4_5_crontab_automation()` (no longer needed without Google Calendar)
 - 🔄 Updated `phase_1_5_python_deps()` - removed Google dependencies
@@ -132,7 +139,7 @@ Successfully migrated the Claude Meeting Memory system from Google OAuth/Calenda
 
 | File | Changes | Lines |
 |------|---------|-------|
-| `setup.sh` | Removed Google OAuth, added Himalaya+Plann phases | +210, -320 |
+| `setup.sh` | Removed Google OAuth, added guided Himalaya+Plann phases | +350, -320 |
 | `scripts/meeting_prepper.py` | Replaced Google Calendar with Himalaya email | +180, -260 |
 | `skills/pre-meeting/SKILL.md` | Added Himalaya, email context, updated flow | +35, -15 |
 | `skills/pre-meeting/BUSINESS_FLOW.md` | Removed cron flow, added email section | +80, -90 |
@@ -144,19 +151,56 @@ Successfully migrated the Claude Meeting Memory system from Google OAuth/Calenda
 
 ## User Journey (New)
 
-### Setup Phase
+### Setup Phase - Comprehensive Guided Flow
 ```
 $ bash setup.sh
 [Phases 1-2: checks and directories]
-[Phase 3: Himalaya Configuration]
-  "Install Himalaya? (Y/n): y"
-  "Run: himalaya account configure"
-  "Select provider: Gmail, ProtonMail, etc."
-  "Enter credentials..."
-[Phase 3.5: Plann Configuration (Optional)]
-  "Install Plann? (Y/n): y"
-  "Run: plann account configure"
-  "Select CalDAV server: Nextcloud, Radicale, etc."
+
+[Phase 3: Himalaya Configuration - STEP-BY-STEP]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Setup prompt:
+  "What email provider do you use?"
+  "  1) Gmail"
+  "  2) ProtonMail"
+  "  3) Fastmail"
+  "  4) Microsoft Outlook"
+  "  5) Other IMAP server"
+  "Select provider (1-5): 1"
+
+Gmail-specific guidance:
+  "Gmail Setup:"
+  "1. Go to: https://myaccount.google.com/apppasswords"
+  "2. Create an app password for 'Mail' on 'Other (custom name)'"
+  "3. Copy the 16-character password generated"
+  "📧 Gmail address: user@gmail.com"
+  "🔐 App password (16 characters): [user enters password]"
+
+Then Himalaya interactive setup with context
+  ✓ Himalaya configured successfully!
+
+[Phase 3.5: Plann Calendar Configuration - OPTIONAL]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"Would you like to configure Plann calendar? (Y/n): y"
+
+Setup prompt:
+  "What CalDAV server do you use?"
+  "  1) Nextcloud (self-hosted or provider)"
+  "  2) Radicale (self-hosted)"
+  "  3) FastMail"
+  "  4) Other CalDAV server"
+  "Select provider (1-4): 1"
+
+Nextcloud-specific guidance:
+  "Nextcloud CalDAV Setup:"
+  "Your CalDAV URL is typically:"
+  "  https://your-nextcloud.com/remote.php/dav/calendars/..."
+  "🌐 Nextcloud URL: nextcloud.example.com"
+  "👤 CalDAV username: [user enters]"
+  "🔐 CalDAV password: [user enters]"
+
+Then Plann interactive setup with context
+  ✓ Plann configured successfully!
+
 [Phase 4: Slack Integration]
 [Phases 5-9: Skills, templates, validation, summary]
 ```
@@ -231,8 +275,18 @@ These are outside the scope of this migration but could be useful:
 
 ### Setup Script
 - [ ] Run `bash setup.sh` with fresh system
-- [ ] Himalaya phase works (install + configure)
-- [ ] Plann phase works (install + configure)
+- [ ] Himalaya phase works with provider selection
+  - [ ] Gmail option shows correct setup instructions
+  - [ ] ProtonMail option shows correct setup instructions
+  - [ ] Fastmail option shows correct setup instructions
+  - [ ] Outlook option shows correct setup instructions
+  - [ ] Other IMAP option accepts generic server details
+- [ ] Plann phase is optional and skippable
+  - [ ] Can skip with "n" response
+  - [ ] Nextcloud provider option works
+  - [ ] Radicale provider option works
+  - [ ] FastMail provider option works
+  - [ ] Other CalDAV option accepts generic server details
 - [ ] Validation checks Himalaya/Plann correctly
 - [ ] Summary shows correct completion message
 - [ ] Reinstall with `--reinstall` flag works
@@ -257,9 +311,11 @@ These are outside the scope of this migration but could be useful:
 ```
 commit c0e057e - Migration: Replace Google OAuth/Calendar with Himalaya/Plann
 commit 54c5f25 - Refactor: Adapt /pre-meeting skill to use Himalaya emails
+commit 5ae3ac6 - Document: Add comprehensive migration completion summary
+commit 702a08c - Enhance: Add step-by-step guided setup for Himalaya and Plann
 ```
 
-Both commits are properly formatted with complete explanations and co-authored attribution.
+All commits are properly formatted with complete explanations and co-authored attribution.
 
 ---
 
