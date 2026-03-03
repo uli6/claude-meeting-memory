@@ -935,10 +935,38 @@ phase_7_5_profile_setup() {
     local email
     email=$(read_input "📧 Your email (optional)")
 
-    # Slack handle
+    # Slack handle - REQUIRED if Slack token was configured
     echo ""
     local slack_handle
-    slack_handle=$(read_input "💬 Slack handle (e.g., @seu.username) (optional)")
+
+    # Check if Slack token exists (was configured in Phase 4)
+    local slack_token_exists=false
+    if command -v security &> /dev/null; then
+        if security find-generic-password -a "$USER" -s "claude-code-slack-user-token" &>/dev/null; then
+            slack_token_exists=true
+        fi
+    elif command -v secret-tool &> /dev/null; then
+        if secret-tool lookup slack-user-token &>/dev/null; then
+            slack_token_exists=true
+        fi
+    fi
+
+    if [[ "$slack_token_exists" == true ]]; then
+        # Slack is configured - Slack Handle is REQUIRED
+        print_info "Slack integration is configured."
+        print_info "Your Slack handle is required to send meeting briefings via direct message."
+        echo ""
+
+        slack_handle=$(read_input "💬 Slack handle (e.g., @seu.username)")
+
+        while [[ -z "$slack_handle" ]]; do
+            print_warning "Slack handle is required for meeting briefings"
+            slack_handle=$(read_input "💬 Slack handle (e.g., @seu.username)")
+        done
+    else
+        # Slack not configured - Slack Handle is optional
+        slack_handle=$(read_input "💬 Slack handle (e.g., @seu.username) (optional)")
+    fi
 
     echo ""
     print_info "Saving your profile..."
