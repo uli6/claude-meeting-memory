@@ -7,7 +7,12 @@
 # skill registration, and memory initialization.
 #
 # Usage: bash setup.sh
+#        bash setup.sh --reinstall
 #        curl -fsSL https://raw.githubusercontent.com/uli6/claude-meeting-memory/main/setup.sh | bash
+#
+# Options:
+#   --reinstall   - Remove existing installation and start fresh
+#   --help        - Show this help message
 #
 # Version: 1.0.0
 # License: MIT
@@ -42,6 +47,38 @@ INSTALLED_COMPONENTS=()
 # Utility Functions
 ################################################################################
 
+# Show help
+show_help() {
+    cat << 'HELP_TEXT'
+Claude Meeting Memory - Setup Script
+
+Usage:
+  bash setup.sh                 - Normal setup (first time or update)
+  bash setup.sh --reinstall     - Remove existing installation and start fresh
+  bash setup.sh --help          - Show this help message
+
+Options:
+  --reinstall   Remove all Claude Meeting Memory files and credentials,
+                then run setup fresh. Use if you want to reconfigure
+                everything from scratch.
+
+  --help        Show this help message
+
+Examples:
+  # First time installation
+  curl -fsSL https://raw.githubusercontent.com/uli6/claude-meeting-memory/main/setup.sh | bash
+
+  # Reinstall (remove old config, start fresh)
+  bash setup.sh --reinstall
+
+  # After modifying setup.sh locally
+  bash setup.sh
+
+For more information, see: https://github.com/uli6/claude-meeting-memory
+
+HELP_TEXT
+}
+
 # Print with color
 print_header() {
     echo -e "${BOLD}${BLUE}════════════════════════════════════════════════════════════${NC}"
@@ -63,6 +100,108 @@ print_warning() {
 
 print_info() {
     echo -e "${BLUE}ℹ${NC}  $1"
+}
+
+# Reinstall (cleanup old installation)
+reinstall_cleanup() {
+    print_header "Removing Existing Installation"
+    echo ""
+
+    print_warning "This will remove:"
+    echo "  • ~/.claude/memory/ (except memoria_agente/perfil_usuario.md)"
+    echo "  • ~/.claude/skills/read-this"
+    echo "  • ~/.claude/skills/pre-meeting"
+    echo "  • ~/.claude/skills/remind-me"
+    echo "  • ~/.claude/scripts/ (helper scripts only)"
+    echo "  • ~/.claude/logs/"
+    echo "  • ~/.claude/claude.json (skills section only)"
+    echo "  • Keychain/Secret Service credentials"
+    echo "  • Crontab entry for pre_meeting_cron.sh"
+    echo ""
+
+    print_warning "This will NOT remove:"
+    echo "  • ~/.claude/ directory itself"
+    echo "  • memoria_agente/perfil_usuario.md (your profile is safe)"
+    echo "  • Other files in ~/.claude/"
+    echo ""
+
+    if ! ask_yes_no "Continue with reinstall?"; then
+        print_error "Reinstall cancelled"
+        exit 0
+    fi
+
+    echo ""
+    print_info "Removing old installation..."
+    echo ""
+
+    # Remove memory files (except profile)
+    if [[ -d "$MEMORY_DIR" ]]; then
+        find "$MEMORY_DIR" -maxdepth 1 -type f -delete 2>/dev/null || true
+        print_success "Cleaned up memory files"
+    fi
+
+    # Remove skills
+    if [[ -d "$SKILLS_DIR" ]]; then
+        rm -rf "$SKILLS_DIR/read-this" 2>/dev/null || true
+        rm -rf "$SKILLS_DIR/pre-meeting" 2>/dev/null || true
+        rm -rf "$SKILLS_DIR/remind-me" 2>/dev/null || true
+        print_success "Removed old skills"
+    fi
+
+    # Remove helper scripts (but keep memory subdirectories)
+    if [[ -d "$SCRIPTS_DIR" ]]; then
+        rm -f "$SCRIPTS_DIR"/*.py 2>/dev/null || true
+        rm -f "$SCRIPTS_DIR"/*.sh 2>/dev/null || true
+        print_success "Removed old scripts"
+    fi
+
+    # Remove logs
+    if [[ -d "$CLAUDE_HOME/logs" ]]; then
+        rm -rf "$CLAUDE_HOME/logs" 2>/dev/null || true
+        print_success "Removed old logs"
+    fi
+
+    # Remove credentials from keychain (macOS)
+    if command -v security &> /dev/null; then
+        security delete-generic-password -a "$USER" -s "claude-code-google-client-id" 2>/dev/null || true
+        security delete-generic-password -a "$USER" -s "claude-code-google-client-secret" 2>/dev/null || true
+        security delete-generic-password -a "$USER" -s "claude-code-google-refresh-token" 2>/dev/null || true
+        security delete-generic-password -a "$USER" -s "claude-code-slack-user-token" 2>/dev/null || true
+        security delete-generic-password -a "$USER" -s "claude-code-slack-member-id" 2>/dev/null || true
+        print_success "Removed credentials from Keychain"
+    fi
+
+    # Remove credentials from secret service (Linux)
+    if command -v secret-tool &> /dev/null; then
+        secret-tool clear label "Claude Code" 2>/dev/null || true
+        print_success "Removed credentials from Secret Service"
+    fi
+
+    # Remove crontab entry
+    if command -v crontab &> /dev/null; then
+        local existing_cron
+        existing_cron=$(crontab -l 2>/dev/null || echo "")
+
+        if echo "$existing_cron" | grep -q "pre_meeting_cron.sh"; then
+            # Remove the crontab entry
+            echo "$existing_cron" | grep -v "pre_meeting_cron.sh" | crontab - 2>/dev/null || true
+            print_success "Removed crontab entry"
+        fi
+    fi
+
+    # Remove claude.json if it only contains our skills
+    if [[ -f "${CLAUDE_HOME}/claude.json" ]]; then
+        # This is careful - only remove if file is very small or contains only our skills
+        # Better to leave it and let user manually edit if needed
+        print_info "Preserved ~/.claude/claude.json (manual cleanup may be needed)"
+    fi
+
+    echo ""
+    print_success "Reinstall cleanup complete!"
+    echo ""
+    print_info "Your user profile is preserved at:"
+    echo "  ~/.claude/memory/memoria_agente/perfil_usuario.md"
+    echo ""
 }
 
 # Ask yes/no question
@@ -1194,6 +1333,27 @@ SUMMARY_INFO
 ################################################################################
 
 main() {
+    # Handle command-line arguments
+    case "${1:-}" in
+        --help)
+            show_help
+            exit 0
+            ;;
+        --reinstall)
+            reinstall_cleanup
+            # Continue to normal setup after cleanup
+            ;;
+        "")
+            # Normal setup
+            ;;
+        *)
+            print_error "Unknown option: $1"
+            echo ""
+            show_help
+            exit 1
+            ;;
+    esac
+
     clear
 
     cat << 'WELCOME'
