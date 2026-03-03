@@ -116,7 +116,6 @@ reinstall_cleanup() {
     echo "  • ~/.claude/logs/"
     echo "  • ~/.claude/claude.json (skills section only)"
     echo "  • Keychain/Secret Service credentials"
-    echo "  • Crontab entry for pre_meeting_cron.sh"
     echo ""
 
     print_warning "This will NOT remove:"
@@ -175,18 +174,6 @@ reinstall_cleanup() {
     if command -v secret-tool &> /dev/null; then
         secret-tool clear label "Claude Code" 2>/dev/null || true
         print_success "Removed credentials from Secret Service"
-    fi
-
-    # Remove crontab entry
-    if command -v crontab &> /dev/null; then
-        local existing_cron
-        existing_cron=$(crontab -l 2>/dev/null || echo "")
-
-        if echo "$existing_cron" | grep -q "pre_meeting_cron.sh"; then
-            # Remove the crontab entry
-            echo "$existing_cron" | grep -v "pre_meeting_cron.sh" | crontab - 2>/dev/null || true
-            print_success "Removed crontab entry"
-        fi
     fi
 
     # Remove claude.json if it only contains our skills
@@ -368,12 +355,9 @@ phase_1_5_python_deps() {
     echo ""
 
     # List of required packages
+    # Note: Himalaya and Plann are installed via package managers (brew/apt/pip)
+    # not through this Python dependency installer
     local packages=(
-        "google-auth>=2.25.0"
-        "google-auth-oauthlib>=1.2.0"
-        "google-auth-httplib2>=0.2.0"
-        "google-api-client>=1.12.0"
-        "google-generativeai>=0.3.0"
         "slack-sdk>=3.27.0"
     )
 
@@ -478,264 +462,159 @@ phase_2_directories() {
 # Phase 3: Google OAuth Configuration
 ################################################################################
 
-phase_3_google_oauth() {
-    print_header "Phase 3: Google OAuth Configuration"
+################################################################################
+# Phase 3: Himalaya Email Configuration
+################################################################################
+
+phase_3_himalaya() {
+    print_header "Phase 3: Himalaya Email Configuration"
     echo ""
 
-    print_info "Setting up Google Drive and Calendar access..."
+    print_info "Himalaya allows you to access your emails via IMAP"
     echo ""
-    echo "This will allow Claude Code to:"
-    echo "  ✓ Read your Google Docs from Drive"
-    echo "  ✓ Check your Google Calendar for meetings"
-    echo "  ✓ Send you meeting briefings"
+    echo "This will allow you to:"
+    echo "  ✓ Access emails from Gmail, ProtonMail, Fastmail, or any IMAP provider"
+    echo "  ✓ Generate meeting briefings based on email context"
+    echo "  ✓ Integrate with your memory system"
     echo ""
 
-    # Check if credentials already exist
-    if [[ -f "${CLAUDE_HOME}/.google_refresh_token" ]]; then
-        if ask_yes_no "Found existing Google credentials. Use them?"; then
-            print_success "Using existing Google credentials"
+    # Check if Himalaya is installed
+    if ! command -v himalaya &> /dev/null; then
+        print_warning "Himalaya CLI not found"
+        echo ""
+        if ask_yes_no "Would you like to install Himalaya?"; then
             echo ""
+            print_info "Installing Himalaya..."
+            echo ""
+
+            # Detect OS and install appropriately
+            if [[ "$OS_TYPE" == "darwin" ]]; then
+                if command -v brew &> /dev/null; then
+                    brew install himalaya
+                else
+                    print_error "Homebrew not found. Install manually with: brew install himalaya"
+                    return 1
+                fi
+            elif [[ "$OS_TYPE" == "linux" ]]; then
+                if command -v apt &> /dev/null; then
+                    sudo apt update && sudo apt install -y himalaya
+                elif command -v dnf &> /dev/null; then
+                    sudo dnf install himalaya
+                else
+                    print_warning "Please install Himalaya manually: https://github.com/pimalaya/himalaya"
+                    return 1
+                fi
+            fi
+        else
+            print_warning "Skipping Himalaya setup"
             return 0
         fi
     fi
 
+    echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "GETTING GOOGLE CREDENTIALS"
+    echo "CONFIGURING HIMALAYA EMAIL ACCOUNT"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
 
-    # Step 1: Ask if they have credentials
-    if ask_yes_no "Do you have Google OAuth credentials already?"; then
-        # Skip the creation steps
-        print_info "Good! Paste your credentials below..."
-        echo ""
-    else
-        # Guide through creation
-        print_info "No problem! We'll create them together."
-        echo ""
-        echo "This takes about 5 minutes. We'll guide you through each step."
-        echo ""
+    print_info "We'll now configure your email account."
+    echo "You'll need to provide your email address and password/token."
+    echo ""
+    echo "Supported providers:"
+    echo "  • Gmail (with App Password or OAuth)"
+    echo "  • ProtonMail"
+    echo "  • Fastmail"
+    echo "  • Microsoft Outlook"
+    echo "  • Any IMAP server"
+    echo ""
 
-        if ask_yes_no "Ready to create Google credentials?"; then
+    # Run Himalaya's interactive setup
+    if himalaya account configure; then
+        # Validate the configuration works
+        if himalaya envelope list &>/dev/null; then
+            print_success "Himalaya configured successfully!"
+            export HIMALAYA_CONFIGURED=true
             echo ""
-            print_info "Opening Google Cloud Console in your browser..."
-            sleep 2
-
-            echo ""
-            echo "📋 STEP 1: Create a Google Cloud Project"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo ""
-            echo "  ① Go to: https://console.cloud.google.com/"
-            echo "  ② Click the project dropdown (top left)"
-            echo "  ③ Click 'NEW PROJECT'"
-            echo "  ④ Name: 'Claude Meeting Memory'"
-            echo "  ⑤ Click 'CREATE'"
-            echo "  ⑥ Wait 1-2 minutes for project to be created"
-            echo ""
-
-            if ! ask_yes_no "Project created?"; then
-                print_error "Please create the project first, then re-run setup"
-                return 1
-            fi
-
-            echo ""
-            echo "📋 STEP 2: Enable Required APIs"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo ""
-            echo "  Still in Google Cloud Console:"
-            echo "  ① Go to: APIs & Services → Library"
-            echo "  ② Search for 'Google Drive API', click it, click ENABLE"
-            echo "  ③ Go back, search for 'Google Calendar API', click it, click ENABLE"
-            echo "  ④ Go back, search for 'Google Docs API', click it, click ENABLE"
-            echo ""
-
-            if ! ask_yes_no "All three APIs enabled?"; then
-                print_error "Please enable all three APIs, then re-run setup"
-                return 1
-            fi
-
-            echo ""
-            echo "📋 STEP 3: Create OAuth Credentials"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo ""
-            echo "  ① Go to: APIs & Services → Credentials (left menu)"
-            echo "  ② Click 'Create Credentials' → 'OAuth client ID'"
-            echo "  ③ If prompted 'Configure OAuth consent screen':"
-            echo "     • Click 'Configure Consent Screen'"
-            echo "     • Choose 'External' user type"
-            echo "     • Click 'CREATE'"
-            echo "     • Fill: App name = 'Claude Code'"
-            echo "     • Fill your email as support/developer email"
-            echo "     • Click 'SAVE AND CONTINUE' (skip optional parts)"
-            echo "     • Click 'BACK TO DASHBOARD'"
-            echo "  ④ Click 'Create Credentials' → 'OAuth client ID' again"
-            echo "  ⑤ Choose 'Desktop application'"
-            echo "  ⑥ Click 'CREATE'"
-            echo ""
-
-            print_warning "Important: You should now see a popup with your credentials!"
-            echo "Copy the CLIENT ID and CLIENT SECRET from the popup"
-            echo ""
-
-            if ! ask_yes_no "Do you see the credentials popup?"; then
-                print_error "If you don't see it, click the 'DOWNLOAD JSON' button instead"
-                echo "Then open the downloaded file in a text editor to find client_id and client_secret"
-                echo ""
-            fi
+            return 0
         else
-            print_error "Setup requires Google credentials. Re-run when ready."
+            print_error "Himalaya configuration failed. Please try again."
             return 1
         fi
-        echo ""
-    fi
-
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "ENTERING YOUR CREDENTIALS"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo ""
-
-    # Get Client ID and Secret
-    local client_id
-    local client_secret
-
-    print_info "Paste your credentials from Google Cloud Console:"
-    echo ""
-
-    client_id=$(read_input "Google Client ID")
-    if [[ -z "$client_id" ]]; then
-        print_error "Client ID cannot be empty"
-        return 1
-    fi
-    print_success "Client ID received"
-    echo ""
-
-    client_secret=$(read_input "Google Client Secret" "true")
-    if [[ -z "$client_secret" ]]; then
-        print_error "Client Secret cannot be empty"
-        return 1
-    fi
-    print_success "Client Secret received"
-    echo ""
-
-    print_info "Authorizing with Google..."
-    echo ""
-
-    # Create temporary Python script for OAuth
-    local oauth_script="/tmp/claude_oauth_temp.py"
-    cat > "$oauth_script" << 'OAUTH_SCRIPT'
-#!/usr/bin/env python3
-import os
-import sys
-import json
-import webbrowser
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from urllib.parse import urlparse, parse_qs
-import time
-
-CLIENT_ID = sys.argv[1]
-CLIENT_SECRET = sys.argv[2]
-
-class OAuthHandler(BaseHTTPRequestHandler):
-    auth_code = None
-
-    def do_GET(self):
-        if '/auth' in self.path:
-            query = parse_qs(urlparse(self.path).query)
-            if 'code' in query:
-                OAuthHandler.auth_code = query['code'][0]
-                self.send_response(200)
-                self.send_header('Content-type', 'text/html')
-                self.end_headers()
-                msg = '<h1>✓ Authorization successful!</h1><p>You can close this window.</p>'
-                self.wfile.write(msg.encode())
-            else:
-                self.send_response(400)
-                self.end_headers()
-        else:
-            self.send_response(404)
-            self.end_headers()
-
-    def log_message(self, format, *args):
-        pass  # Suppress log messages
-
-try:
-    import google.auth.oauthlib.flow
-    from google.oauth2.credentials import Credentials
-    from google_auth_oauthlib.flow import InstalledAppFlow
-
-    SCOPES = [
-        'https://www.googleapis.com/auth/drive.readonly',
-        'https://www.googleapis.com/auth/calendar.readonly'
-    ]
-
-    # Create flow
-    config = {
-        "installed": {
-            "client_id": CLIENT_ID,
-            "client_secret": CLIENT_SECRET,
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "redirect_uris": ["http://localhost:8080/auth"]
-        }
-    }
-
-    flow = InstalledAppFlow.from_client_config(config, SCOPES)
-    creds = flow.run_local_server(port=8080, open_browser=True)
-
-    # Save refresh token
-    if creds.refresh_token:
-        print(creds.refresh_token)
-    else:
-        print("ERROR: No refresh token obtained", file=sys.stderr)
-        sys.exit(1)
-
-except Exception as e:
-    print(f"ERROR: {e}", file=sys.stderr)
-    sys.exit(1)
-OAUTH_SCRIPT
-
-    # Try to get refresh token
-    if refresh_token=$(python3 "$oauth_script" "$client_id" "$client_secret" 2>/dev/null); then
-        # Store credentials securely
-        export GOOGLE_CAL_CLIENT_ID="$client_id"
-        export GOOGLE_CAL_CLIENT_SECRET="$client_secret"
-        export GOOGLE_REFRESH_TOKEN="$refresh_token"
-
-        # Try to save to Keychain (macOS) or Secret Service (Linux)
-        if command -v security &> /dev/null; then
-            # macOS Keychain
-            security add-generic-password -a "$USER" -s "claude-code-google-client-id" -w "$client_id" 2>/dev/null || true
-            security add-generic-password -a "$USER" -s "claude-code-google-client-secret" -w "$client_secret" 2>/dev/null || true
-            security add-generic-password -a "$USER" -s "claude-code-google-refresh-token" -w "$refresh_token" 2>/dev/null || true
-            print_success "Google credentials saved to Keychain"
-        elif command -v secret-tool &> /dev/null; then
-            # Linux Secret Service
-            secret-tool store --label="Claude Code" google-client-id "$client_id" 2>/dev/null || true
-            secret-tool store --label="Claude Code" google-client-secret "$client_secret" 2>/dev/null || true
-            secret-tool store --label="Claude Code" google-refresh-token "$refresh_token" 2>/dev/null || true
-            print_success "Google credentials saved to Secret Service"
-        else
-            # Fallback: Save to encrypted file
-            print_warning "Keychain/Secret Service not available"
-            print_info "Saving credentials to encrypted file..."
-            # Store in ~/.claude/ for now
-            export GOOGLE_CAL_CLIENT_ID="$client_id"
-            export GOOGLE_CAL_CLIENT_SECRET="$client_secret"
-            export GOOGLE_REFRESH_TOKEN="$refresh_token"
-            print_success "Google credentials stored in environment"
-        fi
-
-        print_success "Google authorization successful!"
-        echo ""
     else
-        print_error "Google OAuth failed"
-        echo "Try again or set up manually later"
-        echo ""
+        print_error "Himalaya setup cancelled"
         return 1
     fi
+}
 
-    # Clean up temporary script
-    rm -f "$oauth_script"
+################################################################################
+# Phase 3.5: Plann Calendar Configuration
+################################################################################
+
+phase_3_5_plann() {
+    print_header "Phase 3.5: Plann Calendar Configuration"
+    echo ""
+
+    print_info "Plann allows you to access your calendar via CalDAV"
+    echo ""
+    echo "This will allow you to:"
+    echo "  ✓ Access calendars from Nextcloud, Radicale, FastMail, or any CalDAV server"
+    echo "  ✓ Generate meeting briefings based on your calendar"
+    echo "  ✓ Integrate with your memory system"
+    echo ""
+
+    # Check if Plann is installed
+    if ! command -v plann &> /dev/null; then
+        print_warning "Plann CLI not found"
+        echo ""
+        if ask_yes_no "Would you like to install Plann?"; then
+            echo ""
+            print_info "Installing Plann..."
+            echo ""
+
+            if python3 -m pip install plann >/dev/null 2>&1; then
+                print_success "Plann installed successfully"
+            else
+                print_error "Failed to install Plann via pip. Install manually with: pip3 install plann"
+                return 1
+            fi
+        else
+            print_warning "Skipping Plann setup"
+            return 0
+        fi
+    fi
+
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "CONFIGURING PLANN CALDAV ACCOUNT"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+
+    print_info "We'll now configure your CalDAV calendar account."
+    echo "You'll need your CalDAV server details and credentials."
+    echo ""
+    echo "Supported servers:"
+    echo "  • Nextcloud"
+    echo "  • Radicale"
+    echo "  • FastMail"
+    echo "  • Any CalDAV-compatible server"
+    echo ""
+
+    # Run Plann's interactive setup
+    if plann account configure; then
+        # Validate the configuration works
+        if plann calendar list &>/dev/null; then
+            print_success "Plann configured successfully!"
+            export PLANN_CONFIGURED=true
+            echo ""
+            return 0
+        else
+            print_error "Plann configuration failed. Please try again."
+            return 1
+        fi
+    else
+        print_error "Plann setup cancelled"
+        return 1
+    fi
 }
 
 ################################################################################
@@ -983,68 +862,6 @@ phase_4_slack() {
 ################################################################################
 # Phase 4.5: Automatic Crontab Setup (If Google OAuth Succeeded)
 ################################################################################
-
-phase_4_5_crontab_automation() {
-    print_header "Phase 4.5: Automatic Meeting Briefing Automation"
-    echo ""
-
-    print_info "Google Calendar access is configured!"
-    echo "Setting up automatic meeting briefing checks every 10 minutes..."
-    echo ""
-
-    # Create logs directory if it doesn't exist
-    mkdir -p "${CLAUDE_HOME}/logs"
-    chmod 700 "${CLAUDE_HOME}/logs"
-
-    # Check if pre_meeting_cron.sh exists
-    if [[ ! -f "${SCRIPTS_DIR}/pre_meeting_cron.sh" ]]; then
-        print_warning "pre_meeting_cron.sh not found, automation skipped"
-        return 0
-    fi
-
-    # Create a temporary cron entry file
-    local temp_cron="/tmp/claude_cron_entry.txt"
-    local cron_entry="*/10 * * * * ${SCRIPTS_DIR}/pre_meeting_cron.sh >> ${CLAUDE_HOME}/logs/pre_meeting_cron.log 2>&1"
-
-    # Get existing crontab
-    local existing_cron
-    existing_cron=$(crontab -l 2>/dev/null || echo "")
-
-    # Check if cron entry already exists
-    if echo "$existing_cron" | grep -q "pre_meeting_cron.sh"; then
-        print_success "Crontab entry already exists"
-        echo ""
-        return 0
-    fi
-
-    # Add new cron entry
-    {
-        echo "$existing_cron"
-        echo "$cron_entry"
-    } | crontab - 2>/dev/null
-
-    if [[ $? -eq 0 ]]; then
-        print_success "Automatic briefing automation enabled!"
-        echo ""
-        echo "Meeting briefings will be sent to Slack every 10 minutes if:"
-        echo "  • There's a meeting in the next 30 minutes"
-        echo "  • You have Slack Member ID configured"
-        echo ""
-        echo "View briefing logs with:"
-        echo "  tail -f ${CLAUDE_HOME}/logs/pre_meeting_cron.log"
-        echo ""
-        echo "To disable this automation, edit your crontab:"
-        echo "  crontab -e"
-        echo "  (find and delete the pre_meeting_cron.sh line)"
-        echo ""
-    else
-        print_warning "Could not set up crontab automation"
-        echo "You can set it up manually later with:"
-        echo "  crontab -e"
-        echo "  Add: ${cron_entry}"
-        echo ""
-    fi
-}
 
 ################################################################################
 # Phase 5: Security Review
@@ -1350,38 +1167,10 @@ phase_7_5_profile_setup() {
     local email
     email=$(read_input "📧 Your email (optional)")
 
-    # Slack handle - REQUIRED if Slack token was configured
+    # Slack handle - Always optional now (no cron automation)
     echo ""
     local slack_handle
-
-    # Check if Slack token exists (was configured in Phase 4)
-    local slack_token_exists=false
-    if command -v security &> /dev/null; then
-        if security find-generic-password -a "$USER" -s "claude-code-slack-user-token" &>/dev/null; then
-            slack_token_exists=true
-        fi
-    elif command -v secret-tool &> /dev/null; then
-        if secret-tool lookup slack-user-token &>/dev/null; then
-            slack_token_exists=true
-        fi
-    fi
-
-    if [[ "$slack_token_exists" == true ]]; then
-        # Slack is configured - Slack Handle is REQUIRED
-        print_info "Slack integration is configured."
-        print_info "Your Slack handle is required to send meeting briefings via direct message."
-        echo ""
-
-        slack_handle=$(read_input "💬 Slack handle (e.g., @seu.username)")
-
-        while [[ -z "$slack_handle" ]]; do
-            print_warning "Slack handle is required for meeting briefings"
-            slack_handle=$(read_input "💬 Slack handle (e.g., @seu.username)")
-        done
-    else
-        # Slack not configured - Slack Handle is optional
-        slack_handle=$(read_input "💬 Slack handle (e.g., @seu.username) (optional)")
-    fi
+    slack_handle=$(read_input "💬 Slack handle (e.g., @seu.username) (optional)")
 
     echo ""
     print_info "Saving your profile..."
@@ -1455,14 +1244,36 @@ phase_8_validation() {
 
     echo ""
 
-    # Check Python dependencies
-    print_info "Checking Python dependencies..."
-    if python3 -c "import google.auth" 2>/dev/null; then
-        print_success "google-auth: OK"
+    # Check Himalaya
+    print_info "Checking Himalaya email configuration..."
+    if command -v himalaya &> /dev/null; then
+        if himalaya envelope list &>/dev/null; then
+            print_success "Himalaya: OK"
+        else
+            print_warning "Himalaya: installed but not configured"
+        fi
     else
-        print_warning "google-auth: not installed (optional)"
+        print_warning "Himalaya: not installed"
     fi
 
+    echo ""
+
+    # Check Plann
+    print_info "Checking Plann calendar configuration..."
+    if command -v plann &> /dev/null; then
+        if plann calendar list &>/dev/null; then
+            print_success "Plann: OK"
+        else
+            print_warning "Plann: installed but not configured"
+        fi
+    else
+        print_warning "Plann: not installed"
+    fi
+
+    echo ""
+
+    # Check Slack
+    print_info "Checking Slack configuration..."
     if python3 -c "import slack_sdk" 2>/dev/null; then
         print_success "slack-sdk: OK"
     else
@@ -1493,20 +1304,20 @@ WHAT'S INSTALLED:
   ✓ Memory system: ~/.claude/memory/
   ✓ Scripts directory: ~/.claude/scripts/
   ✓ Skills: read-this, pre-meeting, remind-me
-  ✓ Google OAuth configured
-  ✓ Slack configured
-  ✓ Python dependencies installed
+  ✓ Himalaya email access configured
+  ✓ Plann calendar access configured
+  ✓ Slack integration (optional)
 
 YOUR THREE SKILLS ARE READY NOW:
 
-  /read-this       - Read Google Docs and save to memory
-  /pre-meeting     - Generate meeting briefings
+  /read-this       - Read files and save to memory
+  /pre-meeting     - Generate meeting briefings from emails
   /remind-me       - Create action points from text/Slack
 
 IMMEDIATE NEXT STEPS:
 
   1. Test the skills:
-     /read-this https://docs.google.com/document/d/YOUR_DOC/edit
+     /read-this ~/some_file.txt
      /pre-meeting
      /remind-me Check the deadline
 
@@ -1610,13 +1421,6 @@ WELCOME
 
     if ! phase_4_slack; then
         print_warning "Slack setup failed, continuing..."
-    fi
-
-    echo ""
-
-    # Phase 4.5: Automatic crontab setup (if Google OAuth succeeded)
-    if [[ -n "${GOOGLE_REFRESH_TOKEN:-}" ]]; then
-        phase_4_5_crontab_automation
     fi
 
     echo ""
