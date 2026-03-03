@@ -159,6 +159,7 @@ See [SETUP_GUIDE.md](./SETUP_GUIDE.md#security-disclosure) for detailed security
 **Credentials & Configuration:**
 - **[docs/GOOGLE_OAUTH_SETUP.md](./docs/GOOGLE_OAUTH_SETUP.md)** - Getting Google OAuth credentials
 - **[docs/SLACK_SETUP.md](./docs/SLACK_SETUP.md)** - Getting Slack user token
+- **[docs/SLACK_HANDLE_REQUIREMENT.md](./docs/SLACK_HANDLE_REQUIREMENT.md)** - Why Slack handle is required for meeting briefings
 
 **Troubleshooting:**
 - **[docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)** - Common issues, FAQs, and solutions
