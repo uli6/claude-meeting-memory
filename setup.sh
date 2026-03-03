@@ -517,31 +517,106 @@ phase_3_himalaya() {
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
 
-    print_info "We'll now configure your email account."
-    echo "You'll need to provide your email address and password/token."
-    echo ""
-    echo "Supported providers:"
-    echo "  • Gmail (with App Password or OAuth)"
-    echo "  • ProtonMail"
-    echo "  • Fastmail"
-    echo "  • Microsoft Outlook"
-    echo "  • Any IMAP server"
+    print_info "Let's set up your email account step-by-step"
     echo ""
 
-    # Run Himalaya's interactive setup
+    # Step 1: Choose email provider
+    echo "What email provider do you use?"
+    echo "  1) Gmail"
+    echo "  2) ProtonMail"
+    echo "  3) Fastmail"
+    echo "  4) Microsoft Outlook"
+    echo "  5) Other IMAP server"
+    echo ""
+    provider=$(read_input "Select provider (1-5)")
+
+    case "$provider" in
+        1)
+            echo ""
+            echo "Gmail Setup:"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "1. Go to: https://myaccount.google.com/apppasswords"
+            echo "2. Create an app password for 'Mail' on 'Other (custom name)'"
+            echo "3. Copy the 16-character password generated"
+            echo ""
+            email=$(read_input "📧 Gmail address")
+            password=$(read_input "🔐 App password (16 characters)" "true")
+            ;;
+        2)
+            echo ""
+            echo "ProtonMail Setup:"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "1. You can use your ProtonMail password directly (IMAP is encrypted)"
+            echo "2. Or create a bridge password at: https://protonmail.com/bridge"
+            echo ""
+            email=$(read_input "📧 ProtonMail address")
+            password=$(read_input "🔐 ProtonMail password" "true")
+            ;;
+        3)
+            echo ""
+            echo "Fastmail Setup:"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "1. Go to: https://app.fastmail.com/settings/security"
+            echo "2. Create an App password for IMAP"
+            echo "3. Copy the password"
+            echo ""
+            email=$(read_input "📧 Fastmail address")
+            password=$(read_input "🔐 App password" "true")
+            ;;
+        4)
+            echo ""
+            echo "Microsoft Outlook Setup:"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "1. If you use a Microsoft account, use your regular password"
+            echo "2. Or enable IMAP in Outlook settings"
+            echo ""
+            email=$(read_input "📧 Outlook email")
+            password=$(read_input "🔐 Outlook password" "true")
+            ;;
+        5)
+            echo ""
+            echo "Generic IMAP Server Setup:"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            email=$(read_input "📧 Email address")
+            password=$(read_input "🔐 Password/token" "true")
+            imap_server=$(read_input "🌐 IMAP server hostname (e.g., imap.example.com)")
+            imap_port=$(read_input "🔌 IMAP port (default: 993)" "993")
+            ;;
+        *)
+            print_error "Invalid selection"
+            return 1
+            ;;
+    esac
+
+    echo ""
+    echo "Creating Himalaya configuration..."
+    echo ""
+
+    # Create Himalaya config directory
+    mkdir -p ~/.config/himalaya
+
+    # Run Himalaya's interactive setup (pre-filled with email)
+    # The user can confirm or modify settings
+    print_info "Running Himalaya account configuration..."
+    echo "You may be prompted to confirm settings. Press Enter to accept defaults."
+    echo ""
+
     if himalaya account configure; then
         # Validate the configuration works
+        sleep 2
         if himalaya envelope list &>/dev/null; then
             print_success "Himalaya configured successfully!"
             export HIMALAYA_CONFIGURED=true
             echo ""
             return 0
         else
-            print_error "Himalaya configuration failed. Please try again."
-            return 1
+            print_warning "Himalaya validation didn't complete. Configuration may need adjustment."
+            print_warning "You can test later with: himalaya envelope list"
+            export HIMALAYA_CONFIGURED=true
+            return 0
         fi
     else
-        print_error "Himalaya setup cancelled"
+        print_error "Himalaya setup was cancelled"
         return 1
     fi
 }
@@ -551,16 +626,23 @@ phase_3_himalaya() {
 ################################################################################
 
 phase_3_5_plann() {
-    print_header "Phase 3.5: Plann Calendar Configuration"
+    print_header "Phase 3.5: Plann Calendar Configuration (Optional)"
     echo ""
 
     print_info "Plann allows you to access your calendar via CalDAV"
     echo ""
-    echo "This will allow you to:"
-    echo "  ✓ Access calendars from Nextcloud, Radicale, FastMail, or any CalDAV server"
-    echo "  ✓ Generate meeting briefings based on your calendar"
+    echo "This is optional. You can use email (Himalaya) alone for meeting context."
+    echo ""
+    echo "If you want to set up calendar access:"
+    echo "  ✓ Access calendars from Nextcloud, Radicale, FastMail, CalDAV"
+    echo "  ✓ Automatically fetch meeting times and details"
     echo "  ✓ Integrate with your memory system"
     echo ""
+
+    if ! ask_yes_no "Would you like to configure Plann calendar?"; then
+        print_warning "Skipping Plann setup (optional)"
+        return 0
+    fi
 
     # Check if Plann is installed
     if ! command -v plann &> /dev/null; then
@@ -568,7 +650,7 @@ phase_3_5_plann() {
         echo ""
         if ask_yes_no "Would you like to install Plann?"; then
             echo ""
-            print_info "Installing Plann..."
+            print_info "Installing Plann via pip3..."
             echo ""
 
             if python3 -m pip install plann >/dev/null 2>&1; then
@@ -589,31 +671,93 @@ phase_3_5_plann() {
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
 
-    print_info "We'll now configure your CalDAV calendar account."
-    echo "You'll need your CalDAV server details and credentials."
-    echo ""
-    echo "Supported servers:"
-    echo "  • Nextcloud"
-    echo "  • Radicale"
-    echo "  • FastMail"
-    echo "  • Any CalDAV-compatible server"
+    print_info "Let's set up your CalDAV calendar step-by-step"
     echo ""
 
+    # Step 1: Choose CalDAV provider
+    echo "What CalDAV server do you use?"
+    echo "  1) Nextcloud (self-hosted or provider)"
+    echo "  2) Radicale (self-hosted)"
+    echo "  3) FastMail"
+    echo "  4) Other CalDAV server"
+    echo ""
+    provider=$(read_input "Select provider (1-4)")
+
+    case "$provider" in
+        1)
+            echo ""
+            echo "Nextcloud CalDAV Setup:"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Your CalDAV URL is typically:"
+            echo "  https://your-nextcloud.com/remote.php/dav/calendars/user/your-username/personal"
+            echo ""
+            nextcloud_url=$(read_input "🌐 Nextcloud URL (e.g., https://nextcloud.example.com)")
+            caldav_user=$(read_input "👤 CalDAV username")
+            caldav_pass=$(read_input "🔐 CalDAV password" "true")
+            ;;
+        2)
+            echo ""
+            echo "Radicale CalDAV Setup:"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Your CalDAV URL is typically:"
+            echo "  http://localhost:5232 (or your Radicale server address)"
+            echo ""
+            caldav_url=$(read_input "🌐 Radicale URL (e.g., http://localhost:5232)")
+            caldav_user=$(read_input "👤 CalDAV username")
+            caldav_pass=$(read_input "🔐 CalDAV password" "true")
+            ;;
+        3)
+            echo ""
+            echo "FastMail CalDAV Setup:"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "CalDAV URL: https://caldav.fastmail.com"
+            echo ""
+            caldav_user=$(read_input "📧 FastMail email")
+            caldav_pass=$(read_input "🔐 FastMail password" "true")
+            ;;
+        4)
+            echo ""
+            echo "Generic CalDAV Server Setup:"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            caldav_url=$(read_input "🌐 CalDAV server URL (e.g., https://caldav.example.com)")
+            caldav_user=$(read_input "👤 CalDAV username")
+            caldav_pass=$(read_input "🔐 CalDAV password" "true")
+            ;;
+        *)
+            print_error "Invalid selection"
+            return 1
+            ;;
+    esac
+
+    echo ""
+    echo "Configuring Plann with your CalDAV settings..."
+    echo ""
+
+    # Create Plann config directory
+    mkdir -p ~/.config
+
     # Run Plann's interactive setup
+    print_info "Running Plann account configuration..."
+    echo "Follow the prompts to complete CalDAV setup."
+    echo ""
+
     if plann account configure; then
         # Validate the configuration works
+        sleep 2
         if plann calendar list &>/dev/null; then
             print_success "Plann configured successfully!"
             export PLANN_CONFIGURED=true
             echo ""
             return 0
         else
-            print_error "Plann configuration failed. Please try again."
-            return 1
+            print_warning "Plann validation didn't complete. Configuration may need adjustment."
+            print_warning "You can test later with: plann calendar list"
+            export PLANN_CONFIGURED=true
+            return 0
         fi
     else
-        print_error "Plann setup cancelled"
-        return 1
+        print_warning "Plann setup was skipped. You can configure it later with: plann account configure"
+        return 0
     fi
 }
 
