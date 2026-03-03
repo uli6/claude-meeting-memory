@@ -712,29 +712,74 @@ phase_3_himalaya() {
     # Create Himalaya config directory
     mkdir -p ~/.config/himalaya
 
-    # Run Himalaya's interactive setup (pre-filled with email)
-    # The user can confirm or modify settings
-    print_info "Running Himalaya account configuration..."
-    echo "You may be prompted to confirm settings. Press Enter to accept defaults."
-    echo ""
+    # Determine IMAP settings based on provider
+    local imap_host imap_port
+    case "$provider" in
+        "1"|1)
+            imap_host="imap.gmail.com"
+            imap_port="993"
+            ;;
+        "2"|2)
+            imap_host="imap.protonmail.com"
+            imap_port="993"
+            ;;
+        "3"|3)
+            imap_host="imap.fastmail.com"
+            imap_port="993"
+            ;;
+        "4"|4)
+            imap_host="outlook.office365.com"
+            imap_port="993"
+            ;;
+        "5"|5)
+            imap_host="${imap_server:-imap.example.com}"
+            imap_port="${imap_port:-993}"
+            ;;
+    esac
 
-    if himalaya account configure; then
-        # Validate the configuration works
-        sleep 2
-        if himalaya envelope list &>/dev/null; then
-            print_success "Himalaya configured successfully!"
-            export HIMALAYA_CONFIGURED=true
-            echo ""
-            return 0
-        else
-            print_warning "Himalaya validation didn't complete. Configuration may need adjustment."
-            print_warning "You can test later with: himalaya envelope list"
-            export HIMALAYA_CONFIGURED=true
-            return 0
-        fi
+    # Create Himalaya config file
+    local himalaya_config="$HOME/.config/himalaya/config.toml"
+
+    print_info "Creating Himalaya config at: $himalaya_config"
+
+    cat > "$himalaya_config" << EOF
+[default]
+backend = "imap"
+
+[imap]
+host = "$imap_host"
+port = $imap_port
+encryption = "tls"
+login = "$email"
+passwd-cmd = "security find-generic-password -a '$email' -s 'himalaya-default' -w 2>/dev/null || echo '$password'"
+
+[maildir]
+root-dir = "~/.local/share/himalaya/mails"
+EOF
+
+    chmod 600 "$himalaya_config"
+
+    # Save password to Keychain if on macOS
+    if command -v security &> /dev/null; then
+        print_info "Saving password to Keychain..."
+        security add-generic-password -a "$email" -s "himalaya-default" -w "$password" 2>/dev/null || \
+        security add-generic-password -U -a "$email" -s "himalaya-default" -w "$password" 2>/dev/null || true
+    fi
+
+    # Test the configuration
+    sleep 1
+    if himalaya --account default envelope list &>/dev/null; then
+        print_success "Himalaya configured successfully!"
+        export HIMALAYA_CONFIGURED=true
+        echo ""
+        return 0
     else
-        print_error "Himalaya setup was cancelled"
-        return 1
+        print_warning "Himalaya validation didn't complete. Configuration may need adjustment."
+        print_warning "Config file created at: $himalaya_config"
+        print_warning "You can test later with: himalaya --account default envelope list"
+        print_warning "Or view logs with: himalaya --debug envelope list"
+        export HIMALAYA_CONFIGURED=true
+        return 0
     fi
 }
 
@@ -819,6 +864,9 @@ phase_3_5_plann() {
     echo ""
     show_section "Calendar Provider Selection"
 
+    # Initialize variables
+    local caldav_url="" caldav_user="" caldav_pass="" nextcloud_url=""
+
     # Step 1: Choose CalDAV provider
     show_calendar_providers
     provider=$(read_input "Select provider (1-4)")
@@ -871,31 +919,58 @@ phase_3_5_plann() {
     # Create Plann config directory
     mkdir -p ~/.config
 
-    # Run Plann's interactive setup
-    print_info "Running Plann account configuration..."
-    echo "Follow the prompts to complete CalDAV setup."
+    # Create Plann config file
+    local plann_config="$HOME/.config/plann.toml"
+
+    print_info "Creating Plann configuration..."
     echo ""
 
-    if plann account configure; then
-        # Validate the configuration works
-        sleep 2
-        if plann calendar list &>/dev/null; then
-            print_success "Plann configured successfully!"
-            export PLANN_CONFIGURED=true
+    # Ensure caldav_url is set for all providers
+    if [[ -z "$caldav_url" ]]; then
+        case "$provider" in
+            "1"|1)
+                # Nextcloud - construct full calendar URL
+                caldav_url="${nextcloud_url}/remote.php/dav/calendars/${caldav_user}/personal"
+                ;;
+            "3"|3)
+                # FastMail uses their calendar URL
+                caldav_url="https://caldav.fastmail.com/"
+                ;;
+        esac
+    fi
 
-            # Setup cron job for calendar watching (every 10 minutes)
-            setup_calendar_watcher_cron
+    # Validate we have required settings
+    if [[ -z "$caldav_url" ]] || [[ -z "$caldav_user" ]] || [[ -z "$caldav_pass" ]]; then
+        print_error "Missing required CalDAV settings"
+        return 1
+    fi
 
-            echo ""
-            return 0
-        else
-            print_warning "Plann validation didn't complete. Configuration may need adjustment."
-            print_warning "You can test later with: plann calendar list"
-            export PLANN_CONFIGURED=true
-            return 0
-        fi
+    # Write Plann config file
+    cat > "$plann_config" << EOF
+[calendar]
+caldav-url = "${caldav_url}"
+caldav-username = "${caldav_user}"
+caldav-password = "${caldav_pass}"
+EOF
+
+    chmod 600 "$plann_config"
+
+    # Test the configuration
+    sleep 1
+    if plann list-calendars 2>/dev/null | grep -q calendar; then
+        print_success "Plann configured successfully!"
+        export PLANN_CONFIGURED=true
+
+        # Setup cron job for calendar watching (every 10 minutes)
+        setup_calendar_watcher_cron
+
+        echo ""
+        return 0
     else
-        print_warning "Plann setup was skipped. You can configure it later with: plann account configure"
+        print_warning "Plann validation didn't complete. Configuration may need adjustment."
+        print_warning "Config file created at: $plann_config"
+        print_warning "You can test later with: plann list-calendars"
+        export PLANN_CONFIGURED=true
         return 0
     fi
 }
