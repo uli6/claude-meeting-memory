@@ -930,6 +930,138 @@ TEMPLATE_PERFIL
 }
 
 ################################################################################
+# Phase 7.5: User Profile Setup
+################################################################################
+
+phase_7_5_profile_setup() {
+    print_header "Phase 7.5: User Profile Setup"
+    echo ""
+
+    print_info "Your profile helps generate better meeting briefings."
+    echo "You can:"
+    echo "  • Fill it now (2-3 minutes)"
+    echo "  • Skip and fill it later with: nano ~/.claude/memory/memoria_agente/perfil_usuario.md"
+    echo ""
+
+    if ! ask_yes_no "Do you want to fill your profile now?"; then
+        print_warning "Skipping profile setup"
+        echo "You can fill it later with:"
+        echo "  nano ~/.claude/memory/memoria_agente/perfil_usuario.md"
+        echo ""
+        return 0
+    fi
+
+    echo ""
+    print_info "Let's gather some basic information about you."
+    echo ""
+
+    # Nome
+    local nome
+    nome=$(read_input "👤 Full name (or nickname)")
+    if [[ -z "$nome" ]]; then
+        print_warning "Skipping profile - no name provided"
+        return 0
+    fi
+
+    # Cargo
+    echo ""
+    local cargo
+    cargo=$(read_input "💼 Your job title/role")
+
+    # Time
+    echo ""
+    local time
+    time=$(read_input "👥 Your team/department")
+
+    # Email
+    echo ""
+    local email
+    email=$(read_input "📧 Your email (optional)")
+
+    # Slack handle
+    echo ""
+    local slack_handle
+    slack_handle=$(read_input "💬 Slack handle (e.g., @seu.username) (optional)")
+
+    echo ""
+    print_info "Saving your profile..."
+
+    # Update perfil_usuario.md with user data
+    cat > "${MEMORY_AGENT_DIR}/perfil_usuario.md" << PROFILE_TEMPLATE
+# Seu Perfil - Memória do Agente
+
+Informações sobre você para contexto de reuniões e tarefas.
+
+---
+
+## 👤 Informações Pessoais
+
+**Nome Completo:** $nome
+
+**Cargo/Título:** ${cargo:-[Seu cargo atual]}
+
+**Time/Departamento:** ${time:-[Seu time/departamento]}
+
+**Email:** ${email:-[Seu email profissional]}
+
+**Slack Handle:** ${slack_handle:-@seu.username}
+
+---
+
+## 🏢 Organização
+
+**Empresa:** [Nome da empresa]
+
+**Gerente Direto:** [Nome do seu gerente]
+
+---
+
+## 👥 Time Direto
+
+**Tamanho do Time:** [Número de pessoas]
+
+**Membros:**
+- [Nome] - [Cargo]
+- [Nome] - [Cargo]
+
+---
+
+## 🎯 Responsabilidades Principais
+
+1. **Responsabilidade 1** - [Descrição]
+2. **Responsabilidade 2** - [Descrição]
+3. **Responsabilidade 3** - [Descrição]
+
+---
+
+## 📊 KPIs / Métricas Importantes
+
+- **Métrica 1:** [Descrição e alvo]
+- **Métrica 2:** [Descrição e alvo]
+
+---
+
+## 🚀 Objetivos Atuais
+
+1. **Objetivo 1** - [Descrição]
+2. **Objetivo 2** - [Descrição]
+
+---
+
+**Preencha completamente para melhores resultados nas reuniões!**
+
+**Última atualização:** $(date +%Y-%m-%d)
+PROFILE_TEMPLATE
+
+    print_success "Profile saved!"
+    echo ""
+    print_info "Your profile has been created with the information you provided."
+    echo "You can edit it anytime with:"
+    echo "  nano ~/.claude/memory/memoria_agente/perfil_usuario.md"
+    echo ""
+}
+
+################################################################################
 # Phase 8: Validation
 ################################################################################
 
@@ -1015,13 +1147,13 @@ YOUR THREE SKILLS ARE READY NOW:
 
 IMMEDIATE NEXT STEPS:
 
-  1. Fill your profile:
-     nano ~/.claude/memory/memoria_agente/perfil_usuario.md
-
-  2. Test the skills:
+  1. Test the skills:
      /read-this https://docs.google.com/document/d/YOUR_DOC/edit
      /pre-meeting
      /remind-me Check the deadline
+
+  2. Update your profile (if needed):
+     nano ~/.claude/memory/memoria_agente/perfil_usuario.md
 
   3. Verify everything works:
      bash ~/.claude/scripts/validate.sh
@@ -1099,6 +1231,8 @@ WELCOME
     phase_6_skills
 
     phase_7_templates
+
+    phase_7_5_profile_setup
 
     phase_8_validation
 
