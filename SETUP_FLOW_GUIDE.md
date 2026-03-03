@@ -421,16 +421,28 @@ Com conteúdo pre-preenchido:
 ```markdown
 # Seu Perfil - Memória do Agente
 
+Informações sobre você para contexto de reuniões e tarefas.
+
+---
+
 ## 👤 Informações Pessoais
+
 **Nome Completo:** João Silva
+
 **Cargo/Título:** Software Engineer
+
 **Time/Departamento:** Platform Team
+
 **Email:** joao.silva@company.com
+
 **Slack Handle:** @joao.silva
 
-## 🏢 Organização
-[Resto do template para completar manualmente]
+---
+
+**Última atualização:** 2026-03-03
 ```
+
+**Nota:** O perfil contém apenas informações pessoais essenciais. Outras informações (organização, responsabilidades, objetivos) podem ser adicionadas em `action_points.md` ou em notas de memória diárias conforme necessário.
 
 ---
 
