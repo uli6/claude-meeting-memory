@@ -13,6 +13,19 @@ curl -fsSL https://raw.githubusercontent.com/uli6/claude-meeting-memory/main/set
 
 O script irá guiar através de **9 fases** interativas, resultando em um sistema completo e funcional.
 
+### ⚠️ Importante: Como Claude Code é Usado
+
+Este sistema usa **Claude Code's built-in authentication** - NÃO requer uma API key separada da Anthropic:
+
+- ✅ Scripts Python importam a biblioteca `anthropic`
+- ✅ Scripts usam `apiKeyHelper` (configurado em `~/.claude/settings.json`)
+- ✅ `apiKeyHelper` chama `~/.claude/ifood_auth.sh` para obter autenticação
+- ✅ Autenticação é gerenciada por Claude Code
+- ❌ Nenhuma API key separada necessária
+- ❌ Nenhuma configuração adicional de Anthropic
+
+**Resultado:** Usuários não precisam gerenciar API keys. O sistema funciona com a instalação existente do Claude Code.
+
 ---
 
 ## Fase 1: Verificação Inicial (30 segundos)
@@ -40,10 +53,18 @@ O script irá guiar através de **9 fases** interativas, resultando em um sistem
 ### O que acontece:
 - Verifica se Python 3.8+ está instalado
 - Instala pacotes Python necessários automaticamente:
-  - anthropic (Claude API)
-  - google-auth, google-api-client (Google OAuth)
-  - slack-sdk (Slack integration)
-  - pathlib, json, subprocess (built-in)
+  - anthropic (Para scripts Python que usam Claude via Claude Code)
+  - google-auth, google-api-client (Para autenticação Google OAuth)
+  - slack-sdk (Para integração Slack)
+
+### Nota Importante:
+Os scripts Python (`add_action_point.py`, `email_memory_processor.py`, etc.) importam a biblioteca `anthropic`, mas não usam API keys separadas. Em vez disso, eles chamam o `apiKeyHelper` (configurado em `~/.claude/settings.json`) que usa a autenticação integrada do Claude Code via `~/.claude/ifood_auth.sh`.
+
+**Resumo:**
+- Scripts importam `anthropic` ✓
+- Scripts NOT fazem requisições diretas à API Anthropic ✓
+- Scripts usam autenticação do Claude Code ✓
+- Nenhuma API key separada necessária ✓
 
 ### Output:
 ```
