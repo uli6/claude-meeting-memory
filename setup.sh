@@ -657,9 +657,6 @@ phase_3_himalaya() {
     show_email_providers
     provider=$(read_input "Select provider (1-5)")
 
-    # Debug: show what was entered
-    print_info "You selected: $provider"
-
     case "$provider" in
         "1"|1)
             show_step_guide "Gmail: Create App Password" \
