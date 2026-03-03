@@ -259,6 +259,47 @@ download_file() {
     fi
 }
 
+# Setup cron job for calendar watcher
+setup_calendar_watcher_cron() {
+    local script_path="${SCRIPTS_DIR}/calendar_watcher.sh"
+    local cron_job="*/10 * * * * $script_path >> /dev/null 2>&1"
+    local cron_identifier="# Calendar Watcher - Meeting Detection (Claude Meeting Memory)"
+
+    print_info "Setting up calendar watcher cron job (every 10 minutes)..."
+    echo ""
+
+    # Make script executable
+    chmod +x "$script_path" 2>/dev/null || true
+
+    # Check if cron job already exists
+    if crontab -l 2>/dev/null | grep -q "$script_path"; then
+        print_warning "Calendar watcher cron job already exists"
+        return 0
+    fi
+
+    # Add cron job
+    local temp_cron=$(mktemp)
+    crontab -l 2>/dev/null > "$temp_cron" || true
+    echo "$cron_identifier" >> "$temp_cron"
+    echo "$cron_job" >> "$temp_cron"
+
+    if crontab "$temp_cron" 2>/dev/null; then
+        print_success "Calendar watcher cron job installed!"
+        echo "  • Script: $script_path"
+        echo "  • Schedule: Every 10 minutes"
+        echo "  • Purpose: Monitor calendar for upcoming meetings"
+        echo ""
+        print_info "You can view your crontab with: crontab -l"
+        print_info "You can remove this job with: crontab -e (remove the marked lines)"
+    else
+        print_error "Failed to install cron job"
+        print_warning "You can add manually: crontab -e"
+        print_warning "Then add: $cron_job"
+    fi
+
+    rm -f "$temp_cron"
+}
+
 ################################################################################
 # Phase 1: Initial Checks & Welcome
 ################################################################################
@@ -747,6 +788,10 @@ phase_3_5_plann() {
         if plann calendar list &>/dev/null; then
             print_success "Plann configured successfully!"
             export PLANN_CONFIGURED=true
+
+            # Setup cron job for calendar watching (every 10 minutes)
+            setup_calendar_watcher_cron
+
             echo ""
             return 0
         else
