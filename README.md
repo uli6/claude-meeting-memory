@@ -33,14 +33,14 @@ Automated onboarding system for Claude Code with secure credential management, s
 
 📧 **Email Automation**
 - Automatically check Gmail every 10 minutes
-- Use Gemini AI to process and summarize emails
+- Use Claude AI (via Claude Code) to process and summarize emails
 - Extract action items and save to memory
 - Populate memory files automatically (people, projects, dates)
 - Organize notes by date and topic
 - Auto-close action items when they're resolved
 - Perfect for capturing email-based context for meetings
 
-**Status:** Requires 15-minute additional setup with Google Cloud and Gemini API
+**Status:** Requires 15-minute additional setup with Gmail service account (no extra API keys needed!)
 
 ## Quick Start
 
@@ -67,7 +67,7 @@ The setup script automatically installs required Python packages:
 - `google-auth` - Google authentication
 - `google-auth-oauthlib` - OAuth flow
 - `google-api-client` - Google APIs
-- `google-generativeai` - Gemini AI (for email automation)
+- `anthropic` - Claude API (for email automation via Claude Code)
 - `slack-sdk` - Slack integration
 
 Or install manually:
@@ -151,8 +151,8 @@ See [SETUP_GUIDE.md](./SETUP_GUIDE.md#security-disclosure) for detailed security
 - **[CRONTAB_SETUP.md](./docs/CRONTAB_SETUP.md)** - Enable automatic briefings every 10 minutes
 
 **Email Automation (NEW!):**
-- **[GETTING_STARTED_EMAIL.md](./docs/GETTING_STARTED_EMAIL.md)** - Quick 15-minute setup for email automation
-- **[EMAIL_AUTOMATION.md](./docs/EMAIL_AUTOMATION.md)** - Complete email automation guide with Gemini integration
+- **[GETTING_STARTED_EMAIL.md](./docs/GETTING_STARTED_EMAIL.md)** - Quick 15-minute setup for email automation (no extra API keys!)
+- **[EMAIL_AUTOMATION.md](./docs/EMAIL_AUTOMATION.md)** - Complete email automation guide with Claude integration
 - **[EMAIL_CONFIG_REFERENCE.md](./docs/EMAIL_CONFIG_REFERENCE.md)** - Full configuration reference with examples
 
 **Credentials & Configuration:**
@@ -190,9 +190,10 @@ See [SETUP_GUIDE.md](./SETUP_GUIDE.md#security-disclosure) for detailed security
 
 If you want emails to automatically populate your memory:
 1. Create a Google Cloud Project and service account
-2. Get Gemini API key
-3. Configure email_config.json with your settings
-4. Add cron job to process emails every 10 minutes
+2. Configure email_config.json with your settings
+3. Add cron job to process emails every 10 minutes
+
+**Important:** Claude API is accessed through Claude Code's built-in authentication - no extra API keys needed!
 
 **See:** [GETTING_STARTED_EMAIL.md](./docs/GETTING_STARTED_EMAIL.md) for step-by-step guide
 
@@ -226,8 +227,21 @@ Found a bug? Have a suggestion? [Open an issue](https://github.com/uli6/claude-m
 
 MIT License - See LICENSE file for details
 
+## Verification Status
+
+✅ **All systems verified and working:**
+- Three skills ready to use immediately after setup
+- Memory system fully functional
+- Claude Code integration complete (no extra API keys needed)
+- Email automation optional and documented
+- All Python dependencies available
+- Complete documentation for all features
+
+See [SETUP_VERIFICATION_REPORT.md](./SETUP_VERIFICATION_REPORT.md) for detailed testing results.
+
 ---
 
-**Version:** 1.0.0
-**Last Updated:** March 2, 2026
+**Version:** 2.0.0 (Claude Code Integration)
+**Last Updated:** March 3, 2026
+**Status:** ✅ Production Ready
 **Repository:** https://github.com/uli6/claude-meeting-memory
