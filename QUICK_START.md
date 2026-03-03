@@ -67,22 +67,27 @@ This makes briefings more personalized.
 nano ~/.claude/memory/MEMORY.md    # Add notes about your day
 ```
 
-## Enable Automation (Optional, 2 minutes)
+## Automatic Briefings (Already Enabled!)
 
-Get automatic Slack briefings 30 minutes before each meeting:
+✨ **NEW:** If you configured Google OAuth during setup, automatic briefing checks are **already enabled**!
 
+The setup script automatically:
+- Adds crontab entry to run every 10 minutes
+- Creates `~/.claude/logs/` for briefing logs
+- Sends meeting briefings to Slack 30 minutes before each meeting
+
+**Monitor your briefings:**
 ```bash
-# 1. Verify setup is working
-bash ~/.claude/scripts/validate.sh
-
-# 2. Set up crontab
-crontab -e
-# Add: */10 * * * * ~/.claude/scripts/pre_meeting_cron.sh >> ~/.claude/logs/pre_meeting_cron.log 2>&1
-
-# 3. Monitor logs
 tail -f ~/.claude/logs/pre_meeting_cron.log
 ```
 
+**Disable if needed:**
+```bash
+crontab -e
+# Find and delete the pre_meeting_cron.sh line
+```
+
+**Need to set it up manually?**
 See [CRONTAB_SETUP.md](./docs/CRONTAB_SETUP.md) for detailed instructions.
 
 ## Your Memory System

@@ -276,10 +276,20 @@ nano ~/.claude/memory/memoria_agente/perfil_usuario.md
 /remind-me [your action item]
 ```
 
-### Step 4: Use Daily (30 seconds each)
+### Step 4: Enjoy Automatic Briefings
+✨ If you configured Google OAuth, briefings are **already running**:
 ```bash
-# Morning: Get briefed
-/pre-meeting
+# View automatic briefing logs
+tail -f ~/.claude/logs/pre_meeting_cron.log
+
+# Every 10 minutes, system checks for meetings in next 30 min
+# and sends briefing to your Slack automatically
+```
+
+### Step 5: Use Daily (30 seconds each)
+```bash
+# Morning: Get briefed (already sent to Slack!)
+/pre-meeting   # or check your Slack
 
 # During meetings: Track action items
 /remind-me [important commitment]

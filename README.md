@@ -172,7 +172,7 @@ See [SETUP_GUIDE.md](./SETUP_GUIDE.md#security-disclosure) for detailed security
 
 ## How It Works
 
-### The Setup Process (10 Phases)
+### The Setup Process (11 Phases)
 
 **Automatic Setup - Takes ~5 minutes:**
 1. **Dependencies Check** - Verify required system tools
@@ -180,13 +180,16 @@ See [SETUP_GUIDE.md](./SETUP_GUIDE.md#security-disclosure) for detailed security
 3. **Directory Structure** - Create `~/.claude/` directories
 4. **Google OAuth** - Authorize access to Drive/Calendar (optional, browser auto-opens)
 5. **Slack Configuration** - Configure Slack user token + Member ID (optional)
-6. **Security Review** - Review credential storage methods
-7. **Skill Registration** - Register skills in `~/.claude/claude.json`
-8. **Template Creation** - Initialize memory files
-9. **Validation** - Test all components
-10. **Summary** - Final checklist and next steps
+6. **Automatic Briefing Setup** - ✨ NEW: If Google succeeds, auto-enables 10-minute meeting checks via crontab
+7. **Security Review** - Review credential storage methods
+8. **Skill Registration** - Register skills in `~/.claude/claude.json`
+9. **Template Creation** - Initialize memory files
+10. **Validation** - Test all components
+11. **Summary** - Final checklist and next steps
 
 **After setup, your three skills are immediately ready to use.**
+
+**Bonus:** If Google OAuth succeeds, meeting briefings will automatically be sent to your Slack every 10 minutes!
 
 ### Optional: Email Automation Setup (15 minutes)
 
@@ -212,14 +215,33 @@ You're in control:
 - Revoke Slack: https://api.slack.com/apps
 - Delete local credentials: `bash ~/.claude/scripts/get_secret.sh --reset`
 
-## Advanced: Automation
+## Automation
 
-After setup, you can enable automatic features:
+### Automatic Meeting Briefings
+
+**Now automatic!** If you successfully configure Google OAuth during setup, meeting briefings are automatically enabled:
 
 ```bash
-# Enable automatic meeting briefings (optional)
-# Setup will guide you through cron configuration
+# Crontab entry added automatically:
+*/10 * * * * ~/.claude/scripts/pre_meeting_cron.sh >> ~/.claude/logs/pre_meeting_cron.log 2>&1
 ```
+
+This checks your calendar every 10 minutes and sends briefings to your Slack 30 minutes before meetings.
+
+**View briefing logs:**
+```bash
+tail -f ~/.claude/logs/pre_meeting_cron.log
+```
+
+**Disable if needed:**
+```bash
+crontab -e
+# Find and delete the pre_meeting_cron.sh line
+```
+
+### Optional: Email Automation
+
+For automatic email processing and memory population, see [GETTING_STARTED_EMAIL.md](./docs/GETTING_STARTED_EMAIL.md)
 
 ## Contributing
 

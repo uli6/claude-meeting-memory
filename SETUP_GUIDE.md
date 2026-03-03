@@ -68,9 +68,9 @@ cd claude-meeting-memory
 bash setup.sh
 ```
 
-## Setup Process (9 Phases)
+## Setup Process (11 Phases)
 
-The setup script will guide you through 9 phases:
+The setup script will guide you through 11 phases (including two automated phases):
 
 ### Phase 1: Initial Checks & Welcome
 
@@ -201,6 +201,46 @@ Your Slack user token grants read-only access to:
 - Your Slack user token is stored securely
 - Slack Member ID enables direct messaging
 - No other Slack data is accessed
+
+### Phase 4.5: Automatic Meeting Briefing Setup ✨ NEW
+
+**Only if Google OAuth succeeded**
+
+If you successfully configured Google OAuth, setup automatically enables meeting briefing checks:
+
+```
+════════════════════════════════════════════════════════════════
+  Phase 4.5: Automatic Meeting Briefing Automation
+════════════════════════════════════════════════════════════════
+
+Google Calendar access is configured!
+Setting up automatic meeting briefing checks every 10 minutes...
+
+✓ Automatic briefing automation enabled!
+
+Meeting briefings will be sent to Slack every 10 minutes if:
+  • There's a meeting in the next 30 minutes
+  • You have Slack Member ID configured
+
+View briefing logs with:
+  tail -f ~/.claude/logs/pre_meeting_cron.log
+
+To disable this automation, edit your crontab:
+  crontab -e
+  (find and delete the pre_meeting_cron.sh line)
+```
+
+**What it does:**
+- Automatically adds crontab entry (only once, avoids duplicates)
+- Creates `~/.claude/logs/` directory for logs
+- Runs `pre_meeting_cron.sh` every 10 minutes
+- Sends meeting briefings to your Slack 30 minutes before meetings
+- Gracefully skips if Slack Member ID not configured
+
+**Why automatic?**
+- Zero additional setup required
+- Meeting briefings ready immediately after setup
+- User can easily disable if not wanted
 
 ### Phase 5: Security Review
 
