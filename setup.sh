@@ -328,40 +328,18 @@ read_input() {
     local prompt="$1"
     local mask="${2:-false}"
     local value
-    local use_tty=false
-
-    # Check if we can use /dev/tty
-    if [[ -t 0 ]] || ( [[ -c /dev/tty ]] 2>/dev/null ); then
-        use_tty=true
-    fi
 
     if [[ "$mask" == "true" ]]; then
         echo -ne "${prompt}: " >&2
-        if [[ "$use_tty" == "true" ]]; then
-            read -rs value </dev/tty || value=""
-        else
-            read -rs value || value=""
-        fi
-        echo # New line after masked input >&2
+        read -rs value
+        echo >&2
     else
         echo -ne "${prompt}: " >&2
-        if [[ "$use_tty" == "true" ]]; then
-            read -r value </dev/tty || value=""
-        else
-            read -r value || value=""
-        fi
+        read -r value
     fi
 
-    # Remove leading/trailing whitespace using parameter expansion
-    value="${value#"${value%%[![:space:]]*}"}"   # Remove leading whitespace
-    value="${value%"${value##*[![:space:]]}"}"   # Remove trailing whitespace
-
-    # Additional trim for newlines and carriage returns
-    value="${value//[$'\n']/}"
-    value="${value//[$'\r']/}"
-
-    # Echo the clean value to stdout (for command substitution)
-    echo "$value"
+    # Simple and robust trim using printf
+    printf '%s\n' "$value" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
 }
 
 # Download file from GitHub
