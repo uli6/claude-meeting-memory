@@ -329,16 +329,27 @@ read_input() {
     local mask="${2:-false}"
     local value
 
+    # Always show prompt to user on stderr
     if [[ "$mask" == "true" ]]; then
         echo -ne "${prompt}: " >&2
-        read -rs value
+        # Try to read from /dev/tty if available (handles piped input)
+        if [[ -t 0 ]]; then
+            read -rs value
+        else
+            read -rs value </dev/tty 2>/dev/null || read -rs value
+        fi
         echo >&2
     else
         echo -ne "${prompt}: " >&2
-        read -r value
+        # Try to read from /dev/tty if available (handles piped input)
+        if [[ -t 0 ]]; then
+            read -r value
+        else
+            read -r value </dev/tty 2>/dev/null || read -r value
+        fi
     fi
 
-    # Simple and robust trim using printf
+    # Trim whitespace
     printf '%s\n' "$value" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
 }
 
@@ -652,6 +663,9 @@ phase_3_himalaya() {
     # Step 1: Choose email provider
     show_email_providers
     provider=$(read_input "Select provider (1-5)")
+
+    # Debug: show what was entered
+    print_info "You selected: $provider"
 
     case "$provider" in
         "1"|1)
