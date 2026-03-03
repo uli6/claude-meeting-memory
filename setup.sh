@@ -779,8 +779,19 @@ phase_7_templates() {
     print_header "Phase 7: Creating Template Memory Files"
     echo ""
 
+    # Ensure directories exist (critical safety check)
+    if ! mkdir -p "$MEMORY_DIR" 2>/dev/null; then
+        print_error "Failed to create $MEMORY_DIR"
+        return 1
+    fi
+
+    if ! mkdir -p "$MEMORY_AGENT_DIR" 2>/dev/null; then
+        print_error "Failed to create $MEMORY_AGENT_DIR"
+        return 1
+    fi
+
     # action_points.md
-    cat > "${MEMORY_DIR}/action_points.md" << 'TEMPLATE_AP'
+    if ! cat > "${MEMORY_DIR}/action_points.md" << 'TEMPLATE_AP'
 # Action Points
 
 Tracking important tasks and action items.
@@ -794,10 +805,14 @@ Tracking important tasks and action items.
 
 (Items go here when completed)
 TEMPLATE_AP
+    then
+        print_error "Failed to create action_points.md"
+        return 1
+    fi
     print_success "action_points.md created"
 
     # MEMORY.md
-    cat > "${MEMORY_DIR}/MEMORY.md" << 'TEMPLATE_MEM'
+    if ! cat > "${MEMORY_DIR}/MEMORY.md" << 'TEMPLATE_MEM'
 # Memory & Context
 
 Central hub for your daily memory, projects, and context.
@@ -832,10 +847,14 @@ See action_points.md for detailed action items.
 
 **Last Updated:** Today
 TEMPLATE_MEM
+    then
+        print_error "Failed to create MEMORY.md"
+        return 1
+    fi
     print_success "MEMORY.md created"
 
     # perfil_usuario.md
-    cat > "${MEMORY_AGENT_DIR}/perfil_usuario.md" << 'TEMPLATE_PERFIL'
+    if ! cat > "${MEMORY_AGENT_DIR}/perfil_usuario.md" << 'TEMPLATE_PERFIL'
 # Seu Perfil - Memória do Agente
 
 Informações sobre você para contexto de reuniões e tarefas.
@@ -901,6 +920,10 @@ Informações sobre você para contexto de reuniões e tarefas.
 
 **Preencha completamente para melhores resultados nas reuniões!**
 TEMPLATE_PERFIL
+    then
+        print_error "Failed to create perfil_usuario.md"
+        return 1
+    fi
     print_success "perfil_usuario.md created"
 
     echo ""
