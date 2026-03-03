@@ -614,12 +614,12 @@ phase_3_himalaya() {
     show_phase_header 3 9 "Email Configuration (REQUIRED)" "~3-5 minutes"
     echo ""
 
-    print_info "Himalaya allows you to access your emails via IMAP"
+    print_info "Let's connect your email so you can get meeting context"
     echo ""
-    echo "This will allow you to:"
-    echo "  ✓ Access emails from Gmail, ProtonMail, Fastmail, or any IMAP provider"
-    echo "  ✓ Generate meeting briefings based on email context"
-    echo "  ✓ Integrate with your memory system"
+    echo "This enables Claude Memory to:"
+    echo "  ✓ Read your emails for meeting briefings"
+    echo "  ✓ Extract important information automatically"
+    echo "  ✓ Keep context from past conversations"
     echo ""
 
     # Check if Himalaya is installed
@@ -632,14 +632,14 @@ phase_3_himalaya() {
             echo ""
 
             # Detect OS and install appropriately
-            if [[ "$OS_TYPE" == "darwin" ]]; then
+            if [[ "$OS_TYPE" == "darwin" ]] || [[ "$OS_TYPE" == "Darwin" ]]; then
                 if command -v brew &> /dev/null; then
                     brew install himalaya
                 else
                     print_error "Homebrew not found. Install manually with: brew install himalaya"
                     return 1
                 fi
-            elif [[ "$OS_TYPE" == "linux" ]]; then
+            elif [[ "$OS_TYPE" == "linux" ]] || [[ "$OS_TYPE" == "Linux" ]]; then
                 if command -v apt &> /dev/null; then
                     sudo apt update && sudo apt install -y himalaya
                 elif command -v dnf &> /dev/null; then
@@ -650,77 +650,55 @@ phase_3_himalaya() {
                 fi
             fi
         else
-            print_warning "Skipping Himalaya setup"
+            print_warning "Skipping Himalaya setup (required for email briefings)"
             return 0
         fi
     fi
 
     echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "CONFIGURING HIMALAYA EMAIL ACCOUNT"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo ""
-
-    print_info "Let's set up your email account step-by-step"
-    echo ""
+    show_section "Email Provider Selection"
 
     # Step 1: Choose email provider
-    echo "What email provider do you use?"
-    echo "  1) Gmail"
-    echo "  2) ProtonMail"
-    echo "  3) Fastmail"
-    echo "  4) Microsoft Outlook"
-    echo "  5) Other IMAP server"
-    echo ""
+    show_email_providers
     provider=$(read_input "Select provider (1-5)")
 
     case "$provider" in
         1)
-            echo ""
-            echo "Gmail Setup:"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "1. Go to: https://myaccount.google.com/apppasswords"
-            echo "2. Create an app password for 'Mail' on 'Other (custom name)'"
-            echo "3. Copy the 16-character password generated"
-            echo ""
+            show_step_guide "Gmail: Create App Password" \
+                "1. Go to: https://myaccount.google.com/apppasswords" \
+                "2. Select 'Mail' and 'Windows Computer' (or your device)" \
+                "3. Click 'Generate'" \
+                "4. Copy the 16-character password shown (don't include spaces)"
+            show_help_prompt "App Password"
             email=$(read_input "📧 Gmail address")
             password=$(read_input "🔐 App password (16 characters)" "true")
             ;;
         2)
-            echo ""
-            echo "ProtonMail Setup:"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "1. You can use your ProtonMail password directly (IMAP is encrypted)"
-            echo "2. Or create a bridge password at: https://protonmail.com/bridge"
-            echo ""
+            show_step_guide "ProtonMail Setup" \
+                "1. Use your ProtonMail password directly" \
+                "2. Or create a bridge at: https://protonmail.com/bridge"
             email=$(read_input "📧 ProtonMail address")
             password=$(read_input "🔐 ProtonMail password" "true")
             ;;
         3)
-            echo ""
-            echo "Fastmail Setup:"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "1. Go to: https://app.fastmail.com/settings/security"
-            echo "2. Create an App password for IMAP"
-            echo "3. Copy the password"
-            echo ""
+            show_step_guide "Fastmail: Create App Password" \
+                "1. Go to: https://app.fastmail.com/settings/security" \
+                "2. Click 'Generate new password'" \
+                "3. Select 'IMAP' and 'Calendar'" \
+                "4. Copy the password"
             email=$(read_input "📧 Fastmail address")
             password=$(read_input "🔐 App password" "true")
             ;;
         4)
-            echo ""
-            echo "Microsoft Outlook Setup:"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "1. If you use a Microsoft account, use your regular password"
-            echo "2. Or enable IMAP in Outlook settings"
-            echo ""
+            show_step_guide "Microsoft Outlook Setup" \
+                "1. Use your Microsoft account password" \
+                "2. Or enable app passwords at: https://account.microsoft.com/security"
             email=$(read_input "📧 Outlook email")
             password=$(read_input "🔐 Outlook password" "true")
             ;;
         5)
-            echo ""
-            echo "Generic IMAP Server Setup:"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            show_step_guide "Other Email Service Setup" \
+                "If you don't see your provider, we can set it up manually"
             email=$(read_input "📧 Email address")
             password=$(read_input "🔐 Password/token" "true")
             imap_server=$(read_input "🌐 IMAP server hostname (e.g., imap.example.com)")
@@ -773,18 +751,17 @@ phase_3_5_plann() {
     show_phase_header 4 9 "Calendar Configuration (REQUIRED)" "~3-5 minutes"
     echo ""
 
-    print_info "Plann allows you to access your calendar via CalDAV"
+    print_info "Let's connect your calendar for automatic meeting detection"
     echo ""
-    echo "This is optional. You can use email (Himalaya) alone for meeting context."
-    echo ""
-    echo "If you want to set up calendar access:"
-    echo "  ✓ Access calendars from Nextcloud, Radicale, FastMail, CalDAV"
-    echo "  ✓ Automatically fetch meeting times and details"
-    echo "  ✓ Integrate with your memory system"
+    echo "This enables Claude Memory to:"
+    echo "  ✓ Detect when you have meetings coming up"
+    echo "  ✓ Prepare briefings before meetings start"
+    echo "  ✓ Track your schedule automatically"
     echo ""
 
-    if ! ask_yes_no "Would you like to configure Plann calendar?"; then
-        print_warning "Skipping Plann setup (optional)"
+    if ! ask_yes_no "Would you like to configure calendar access now?"; then
+        print_warning "Skipping calendar setup"
+        echo "Note: Email-only mode has limited meeting detection"
         return 0
     fi
 
@@ -810,59 +787,43 @@ phase_3_5_plann() {
     fi
 
     echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "CONFIGURING PLANN CALDAV ACCOUNT"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo ""
-
-    print_info "Let's set up your CalDAV calendar step-by-step"
-    echo ""
+    show_section "Calendar Provider Selection"
 
     # Step 1: Choose CalDAV provider
-    echo "What CalDAV server do you use?"
-    echo "  1) Nextcloud (self-hosted or provider)"
-    echo "  2) Radicale (self-hosted)"
-    echo "  3) FastMail"
-    echo "  4) Other CalDAV server"
-    echo ""
+    show_calendar_providers
     provider=$(read_input "Select provider (1-4)")
 
     case "$provider" in
         1)
-            echo ""
-            echo "Nextcloud CalDAV Setup:"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "Your CalDAV URL is typically:"
-            echo "  https://your-nextcloud.com/remote.php/dav/calendars/user/your-username/personal"
-            echo ""
+            show_step_guide "Nextcloud CalDAV Setup" \
+                "1. Your Nextcloud server URL (if self-hosted)" \
+                "2. Your login credentials (username/password)" \
+                "3. Find your calendar URL in Nextcloud settings"
+            show_help_prompt "Nextcloud"
             nextcloud_url=$(read_input "🌐 Nextcloud URL (e.g., https://nextcloud.example.com)")
             caldav_user=$(read_input "👤 CalDAV username")
             caldav_pass=$(read_input "🔐 CalDAV password" "true")
             ;;
         2)
-            echo ""
-            echo "Radicale CalDAV Setup:"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "Your CalDAV URL is typically:"
-            echo "  http://localhost:5232 (or your Radicale server address)"
-            echo ""
+            show_step_guide "Radicale CalDAV Setup" \
+                "1. Your Radicale server address (usually http://localhost:5232)" \
+                "2. Your login credentials"
+            show_help_prompt "Radicale"
             caldav_url=$(read_input "🌐 Radicale URL (e.g., http://localhost:5232)")
             caldav_user=$(read_input "👤 CalDAV username")
             caldav_pass=$(read_input "🔐 CalDAV password" "true")
             ;;
         3)
-            echo ""
-            echo "FastMail CalDAV Setup:"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "CalDAV URL: https://caldav.fastmail.com"
-            echo ""
+            show_step_guide "FastMail CalDAV Setup" \
+                "1. Use your FastMail email address as username" \
+                "2. Use your FastMail password (or app password)"
             caldav_user=$(read_input "📧 FastMail email")
             caldav_pass=$(read_input "🔐 FastMail password" "true")
             ;;
         4)
-            echo ""
-            echo "Generic CalDAV Server Setup:"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            show_step_guide "Other CalDAV Server Setup" \
+                "1. Your CalDAV server URL" \
+                "2. Your login credentials"
             caldav_url=$(read_input "🌐 CalDAV server URL (e.g., https://caldav.example.com)")
             caldav_user=$(read_input "👤 CalDAV username")
             caldav_pass=$(read_input "🔐 CalDAV password" "true")
