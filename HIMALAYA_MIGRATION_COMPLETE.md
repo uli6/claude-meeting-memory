@@ -97,7 +97,34 @@ Successfully migrated the Claude Meeting Memory system from Google OAuth/Calenda
 
 **Status:** ✅ Updated
 
-#### meeting_prepper.py Refactoring
+#### 3. Calendar Watcher Script (NEW!)
+
+**Purpose**: When Plann is configured, automatically monitor the calendar every 10 minutes
+
+**Features** (`scripts/calendar_watcher.sh` - ~160 lines):
+- Fetches upcoming meetings from Plann CalDAV (next 30 minutes)
+- Caches results in `~/.claude/memory/.cache/upcoming_meetings.json`
+- Tracks processed meetings (avoids duplicate notifications)
+- Optional Slack notifications for upcoming meetings
+- Comprehensive logging to `~/.claude/logs/calendar_watcher.log`
+
+**Cron Integration:**
+- Automatically installed during setup if Plann validation succeeds
+- Schedule: `*/10 * * * *` (every 10 minutes)
+- User can manage via `crontab -l` or `crontab -e`
+- Can be removed by user without affecting other functionality
+
+**Logging:**
+- All activity logged to `~/.claude/logs/calendar_watcher.log`
+- Tracks: calendar checks, new meetings, processed meetings, errors
+
+**Optional Features:**
+- Slack notifications for upcoming meetings (if SLACK_BOT_TOKEN set)
+- Configurable meeting lookback window
+
+**Status:** ✅ Implemented
+
+#### 6. meeting_prepper.py Refactoring
 
 **Replaced entire flow (~460 lines → ~340 lines):**
 
@@ -139,13 +166,14 @@ Successfully migrated the Claude Meeting Memory system from Google OAuth/Calenda
 
 | File | Changes | Lines |
 |------|---------|-------|
-| `setup.sh` | Removed Google OAuth, added guided Himalaya+Plann phases | +350, -320 |
+| `setup.sh` | Removed Google OAuth, added guided Himalaya+Plann phases + cron setup | +395, -320 |
+| `scripts/calendar_watcher.sh` | NEW: Monitor Plann calendar every 10 minutes | +157 |
 | `scripts/meeting_prepper.py` | Replaced Google Calendar with Himalaya email | +180, -260 |
 | `skills/pre-meeting/SKILL.md` | Added Himalaya, email context, updated flow | +35, -15 |
 | `skills/pre-meeting/BUSINESS_FLOW.md` | Removed cron flow, added email section | +80, -90 |
 | `scripts/pre_meeting_cron.sh` | DELETED (no longer used) | - |
 
-**Total impact:** ~310 net lines removed (less code, same functionality)
+**Total impact:** +262 new lines (added calendar watcher feature), overall still streamlined architecture
 
 ---
 
@@ -257,6 +285,36 @@ Claude:
 
 ---
 
+## Calendar Watcher Integration (NEW!)
+
+**When Plann is configured successfully, a cron job is automatically installed:**
+
+✅ **Feature**: Calendar Watcher (`scripts/calendar_watcher.sh`)
+- Runs every 10 minutes
+- Fetches meetings from Plann calendar (next 30 minutes)
+- Caches results for `/pre-meeting` skill to use
+- Tracks processed meetings to avoid duplicates
+- Optional Slack notifications for new upcoming meetings
+- Logs to `~/.claude/logs/calendar_watcher.log`
+
+**How it works:**
+```
+Every 10 minutes:
+  1. Plann fetches upcoming meetings from CalDAV server
+  2. Calendar watcher caches the results
+  3. /pre-meeting skill can use cached data + Himalaya emails
+  4. Optional: Send Slack DM about upcoming meetings
+```
+
+**User management:**
+- View crontab: `crontab -l`
+- Remove calendar watcher: `crontab -e` (remove lines marked with "Calendar Watcher")
+- Check logs: `tail -f ~/.claude/logs/calendar_watcher.log`
+
+This is **optional** - if user skips Plann setup, calendar checking is disabled. The system still works with Himalaya emails alone.
+
+---
+
 ## Remaining Tasks (If Needed)
 
 These are outside the scope of this migration but could be useful:
@@ -264,10 +322,11 @@ These are outside the scope of this migration but could be useful:
 - [ ] Create `HIMALAYA_SETUP.md` - Detailed Himalaya configuration guide
 - [ ] Create `PLANN_SETUP.md` - Detailed Plann configuration guide
 - [ ] Create `MIGRATION_GUIDE.md` - For existing users to migrate from Google
-- [ ] Update main README.md with Himalaya/Plann references
-- [ ] Update `SETUP_GUIDE.md` with new phases
-- [ ] Test full setup flow end-to-end
-- [ ] Test /pre-meeting skill with actual emails
+- [ ] Update main README.md with Himalaya/Plann/Calendar Watcher references
+- [ ] Update `SETUP_GUIDE.md` with new phases and cron setup
+- [ ] Test full setup flow end-to-end with Plann
+- [ ] Test calendar watcher cron functionality
+- [ ] Test /pre-meeting skill with actual emails + calendar data
 
 ---
 
@@ -313,6 +372,7 @@ commit c0e057e - Migration: Replace Google OAuth/Calendar with Himalaya/Plann
 commit 54c5f25 - Refactor: Adapt /pre-meeting skill to use Himalaya emails
 commit 5ae3ac6 - Document: Add comprehensive migration completion summary
 commit 702a08c - Enhance: Add step-by-step guided setup for Himalaya and Plann
+commit 36f0f61 - Feature: Add calendar watcher cron for Plann integration
 ```
 
 All commits are properly formatted with complete explanations and co-authored attribution.
