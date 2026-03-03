@@ -328,22 +328,24 @@ read_input() {
     local prompt="$1"
     local mask="${2:-false}"
     local value
+    local use_tty=false
+
+    # Check if we can use /dev/tty
+    if [[ -t 0 ]] || ( [[ -c /dev/tty ]] 2>/dev/null ); then
+        use_tty=true
+    fi
 
     if [[ "$mask" == "true" ]]; then
-        echo -ne "${prompt}: "
-        # Read from /dev/tty if available (allows input even when piped)
-        if [[ -t 0 ]] || [[ -c /dev/tty ]]; then
+        echo -ne "${prompt}: " >&2
+        if [[ "$use_tty" == "true" ]]; then
             read -rs value </dev/tty || value=""
         else
             read -rs value || value=""
         fi
-        echo # New line after masked input
+        echo # New line after masked input >&2
     else
-        echo -ne "${prompt}: "
-        # Read from /dev/tty if available (allows input even when piped)
-        if [[ -t 0 ]]; then
-            read -r value || value=""
-        elif [[ -c /dev/tty ]]; then
+        echo -ne "${prompt}: " >&2
+        if [[ "$use_tty" == "true" ]]; then
             read -r value </dev/tty || value=""
         else
             read -r value || value=""
@@ -354,6 +356,11 @@ read_input() {
     value="${value#"${value%%[![:space:]]*}"}"   # Remove leading whitespace
     value="${value%"${value##*[![:space:]]}"}"   # Remove trailing whitespace
 
+    # Additional trim for newlines and carriage returns
+    value="${value//[$'\n']/}"
+    value="${value//[$'\r']/}"
+
+    # Echo the clean value to stdout (for command substitution)
     echo "$value"
 }
 
@@ -669,7 +676,7 @@ phase_3_himalaya() {
     provider=$(read_input "Select provider (1-5)")
 
     case "$provider" in
-        1)
+        "1"|1)
             show_step_guide "Gmail: Create App Password" \
                 "1. Go to: https://myaccount.google.com/apppasswords" \
                 "2. Select 'Mail' and 'Windows Computer' (or your device)" \
@@ -679,14 +686,14 @@ phase_3_himalaya() {
             email=$(read_input "📧 Gmail address")
             password=$(read_input "🔐 App password (16 characters)" "true")
             ;;
-        2)
+        "2"|2)
             show_step_guide "ProtonMail Setup" \
                 "1. Use your ProtonMail password directly" \
                 "2. Or create a bridge at: https://protonmail.com/bridge"
             email=$(read_input "📧 ProtonMail address")
             password=$(read_input "🔐 ProtonMail password" "true")
             ;;
-        3)
+        "3"|3)
             show_step_guide "Fastmail: Create App Password" \
                 "1. Go to: https://app.fastmail.com/settings/security" \
                 "2. Click 'Generate new password'" \
@@ -695,14 +702,14 @@ phase_3_himalaya() {
             email=$(read_input "📧 Fastmail address")
             password=$(read_input "🔐 App password" "true")
             ;;
-        4)
+        "4"|4)
             show_step_guide "Microsoft Outlook Setup" \
                 "1. Use your Microsoft account password" \
                 "2. Or enable app passwords at: https://account.microsoft.com/security"
             email=$(read_input "📧 Outlook email")
             password=$(read_input "🔐 Outlook password" "true")
             ;;
-        5)
+        "5"|5)
             show_step_guide "Other Email Service Setup" \
                 "If you don't see your provider, we can set it up manually"
             email=$(read_input "📧 Email address")
@@ -711,7 +718,7 @@ phase_3_himalaya() {
             imap_port=$(read_input "🔌 IMAP port (default: 993)" "993")
             ;;
         *)
-            print_error "Invalid selection"
+            print_error "Invalid selection: '$provider' (expected 1-5)"
             return 1
             ;;
     esac
@@ -835,7 +842,7 @@ phase_3_5_plann() {
     provider=$(read_input "Select provider (1-4)")
 
     case "$provider" in
-        1)
+        "1"|1)
             show_step_guide "Nextcloud CalDAV Setup" \
                 "1. Your Nextcloud server URL (if self-hosted)" \
                 "2. Your login credentials (username/password)" \
@@ -845,7 +852,7 @@ phase_3_5_plann() {
             caldav_user=$(read_input "👤 CalDAV username")
             caldav_pass=$(read_input "🔐 CalDAV password" "true")
             ;;
-        2)
+        "2"|2)
             show_step_guide "Radicale CalDAV Setup" \
                 "1. Your Radicale server address (usually http://localhost:5232)" \
                 "2. Your login credentials"
@@ -854,14 +861,14 @@ phase_3_5_plann() {
             caldav_user=$(read_input "👤 CalDAV username")
             caldav_pass=$(read_input "🔐 CalDAV password" "true")
             ;;
-        3)
+        "3"|3)
             show_step_guide "FastMail CalDAV Setup" \
                 "1. Use your FastMail email address as username" \
                 "2. Use your FastMail password (or app password)"
             caldav_user=$(read_input "📧 FastMail email")
             caldav_pass=$(read_input "🔐 FastMail password" "true")
             ;;
-        4)
+        "4"|4)
             show_step_guide "Other CalDAV Server Setup" \
                 "1. Your CalDAV server URL" \
                 "2. Your login credentials"
@@ -870,7 +877,7 @@ phase_3_5_plann() {
             caldav_pass=$(read_input "🔐 CalDAV password" "true")
             ;;
         *)
-            print_error "Invalid selection"
+            print_error "Invalid selection: '$provider' (expected 1-4)"
             return 1
             ;;
     esac
