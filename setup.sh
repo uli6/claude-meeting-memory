@@ -341,15 +341,20 @@ read_input() {
     else
         echo -ne "${prompt}: "
         # Read from /dev/tty if available (allows input even when piped)
-        if [[ -t 0 ]] || [[ -c /dev/tty ]]; then
+        if [[ -t 0 ]]; then
+            read -r value || value=""
+        elif [[ -c /dev/tty ]]; then
             read -r value </dev/tty || value=""
         else
             read -r value || value=""
         fi
     fi
 
-    # Trim whitespace and return
-    echo "${value}" | xargs
+    # Remove leading/trailing whitespace using parameter expansion
+    value="${value#"${value%%[![:space:]]*}"}"   # Remove leading whitespace
+    value="${value%"${value##*[![:space:]]}"}"   # Remove trailing whitespace
+
+    echo "$value"
 }
 
 # Download file from GitHub
@@ -772,31 +777,43 @@ phase_3_5_plann() {
         echo ""
         if ask_yes_no "Would you like to install Plann?"; then
             echo ""
-            print_info "Installing Plann via pip3..."
+            print_info "Installing Plann..."
             echo ""
 
             # Try multiple installation methods
             local installed=false
 
-            # Method 1: pip3 (preferred)
-            if pip3 install plann >/dev/null 2>&1; then
-                print_success "Plann installed successfully"
+            # Method 1: brew (macOS preferred)
+            if command -v brew &> /dev/null && brew install plann >/dev/null 2>&1; then
+                print_success "Plann installed successfully via Homebrew"
                 installed=true
-            # Method 2: python3 -m pip
+            # Method 2: pip3 (fallback)
+            elif pip3 install plann >/dev/null 2>&1; then
+                print_success "Plann installed successfully via pip3"
+                installed=true
+            # Method 3: python3 -m pip
             elif python3 -m pip install plann >/dev/null 2>&1; then
-                print_success "Plann installed successfully"
+                print_success "Plann installed successfully via python3 -m pip"
                 installed=true
             fi
 
             if [[ "$installed" == "false" ]]; then
-                print_error "Failed to install Plann via pip"
+                print_error "Failed to install Plann automatically"
                 echo ""
-                echo "Try installing manually:"
-                echo "  pip3 install plann"
-                echo "  or"
-                echo "  python3 -m pip install plann"
+                echo "Please install manually using one of these methods:"
                 echo ""
-                if ask_yes_no "Continue setup anyway?"; then
+                echo "  macOS (Homebrew):"
+                echo "    brew install plann"
+                echo ""
+                echo "  Python/pip:"
+                echo "    pip3 install plann"
+                echo ""
+                echo "  Or from GitHub:"
+                echo "    https://github.com/pimalaya/plann"
+                echo ""
+                if ask_yes_no "Continue setup without Plann?"; then
+                    echo ""
+                    print_warning "Note: Calendar functionality will be limited without Plann"
                     echo ""
                 else
                     return 1
@@ -804,6 +821,8 @@ phase_3_5_plann() {
             fi
         else
             print_warning "Skipping Plann setup"
+            echo "Note: Calendar functionality will be limited without Plann"
+            echo ""
             return 0
         fi
     fi
