@@ -632,6 +632,72 @@ phase_4_slack() {
 }
 
 ################################################################################
+# Phase 4.5: Automatic Crontab Setup (If Google OAuth Succeeded)
+################################################################################
+
+phase_4_5_crontab_automation() {
+    print_header "Phase 4.5: Automatic Meeting Briefing Automation"
+    echo ""
+
+    print_info "Google Calendar access is configured!"
+    echo "Setting up automatic meeting briefing checks every 10 minutes..."
+    echo ""
+
+    # Create logs directory if it doesn't exist
+    mkdir -p "${CLAUDE_HOME}/logs"
+    chmod 700 "${CLAUDE_HOME}/logs"
+
+    # Check if pre_meeting_cron.sh exists
+    if [[ ! -f "${SCRIPTS_DIR}/pre_meeting_cron.sh" ]]; then
+        print_warning "pre_meeting_cron.sh not found, automation skipped"
+        return 0
+    fi
+
+    # Create a temporary cron entry file
+    local temp_cron="/tmp/claude_cron_entry.txt"
+    local cron_entry="*/10 * * * * ${SCRIPTS_DIR}/pre_meeting_cron.sh >> ${CLAUDE_HOME}/logs/pre_meeting_cron.log 2>&1"
+
+    # Get existing crontab
+    local existing_cron
+    existing_cron=$(crontab -l 2>/dev/null || echo "")
+
+    # Check if cron entry already exists
+    if echo "$existing_cron" | grep -q "pre_meeting_cron.sh"; then
+        print_success "Crontab entry already exists"
+        echo ""
+        return 0
+    fi
+
+    # Add new cron entry
+    {
+        echo "$existing_cron"
+        echo "$cron_entry"
+    } | crontab - 2>/dev/null
+
+    if [[ $? -eq 0 ]]; then
+        print_success "Automatic briefing automation enabled!"
+        echo ""
+        echo "Meeting briefings will be sent to Slack every 10 minutes if:"
+        echo "  • There's a meeting in the next 30 minutes"
+        echo "  • You have Slack Member ID configured"
+        echo ""
+        echo "View briefing logs with:"
+        echo "  tail -f ${CLAUDE_HOME}/logs/pre_meeting_cron.log"
+        echo ""
+        echo "To disable this automation, edit your crontab:"
+        echo "  crontab -e"
+        echo "  (find and delete the pre_meeting_cron.sh line)"
+        echo ""
+    else
+        print_warning "Could not set up crontab automation"
+        echo "You can set it up manually later with:"
+        echo "  crontab -e"
+        echo "  Add: ${cron_entry}"
+        echo ""
+    fi
+}
+
+################################################################################
 # Phase 5: Security Review
 ################################################################################
 
@@ -1166,6 +1232,13 @@ WELCOME
 
     if ! phase_4_slack; then
         print_warning "Slack setup failed, continuing..."
+    fi
+
+    echo ""
+
+    # Phase 4.5: Automatic crontab setup (if Google OAuth succeeded)
+    if [[ -n "${GOOGLE_REFRESH_TOKEN:-}" ]]; then
+        phase_4_5_crontab_automation
     fi
 
     echo ""
