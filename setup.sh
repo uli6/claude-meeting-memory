@@ -1679,6 +1679,15 @@ WELCOME
 
     echo ""
 
+    # Show what's required vs optional BEFORE starting
+    show_requirement_summary
+
+    echo "This setup will take about 20-25 minutes:"
+    echo "  • Email + Calendar setup: ~10 minutes (REQUIRED)"
+    echo "  • Slack integration: ~5-7 minutes (OPTIONAL)"
+    echo "  • Your profile: ~2-3 minutes (OPTIONAL)"
+    echo ""
+
     # Run all phases
     phase_1_checks
 
@@ -1694,38 +1703,46 @@ WELCOME
     phase_2_directories
 
     echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "CONFIGURATION PHASE"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo ""
+    show_section "CONFIGURATION PHASE"
     print_info "Now let's configure your integrations"
     echo ""
 
-    if ! ask_yes_no "Configure Google OAuth?"; then
-        print_warning "Skipping Google OAuth setup"
-    else
-        if ! phase_3_google_oauth; then
-            print_warning "Google OAuth setup failed, continuing..."
-        fi
+    # REQUIRED: Email configuration (Phase 3)
+    if ! phase_3_himalaya; then
+        print_warning "Email setup failed, continuing..."
     fi
 
     echo ""
 
+    # REQUIRED: Calendar configuration (Phase 3.5 → Phase 4)
+    if ! phase_3_5_plann; then
+        print_warning "Calendar setup failed, continuing..."
+    fi
+
+    echo ""
+
+    # RECOMMENDED: Slack configuration (Phase 4 → Phase 5)
     if ! phase_4_slack; then
         print_warning "Slack setup failed, continuing..."
     fi
 
     echo ""
+    # Security review (Phase 6)
     phase_5_security
 
+    # Skill registration (Phase 7)
     phase_6_skills
 
+    # Templates (Phase 8)
     phase_7_templates
 
+    # Profile setup (Phase 8.5)
     phase_7_5_profile_setup
 
+    # Validation (Phase 9)
     phase_8_validation
 
+    # Summary (Phase 10)
     phase_9_summary
 }
 
